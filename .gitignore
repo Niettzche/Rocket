@@ -1,0 +1,18 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# C build artifacts
+rocket_c/build/
+rocket_c/rocket_sensors
+
+# Logs and runtime files
+*.log
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

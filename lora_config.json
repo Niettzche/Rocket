@@ -1,0 +1,7 @@
+{
+  "mode": "tx",
+  "frequency_hz": 433000000,
+  "spread_factor": 7,
+  "poll_interval": 0.05,
+  "frame_timeout": 2.0
+}
