@@ -22,8 +22,10 @@ DT_SLEEP = 0.05
 #--Config de la aceleracion
 TOLERANCE = 0.05   
 QUIET_DELAY = 1.0
-GPIO_PIN = 26
-GPIO_ACTIVATED_MSG = "\033[31m[GPIO 26 ACTIVADO]\033[0m"
+GPIO_PIN = 12
+GPIO_SECOND_PIN = 7
+GPIO_ACTIVATED_MSG = f"\033[31m[GPIO {GPIO_PIN} ACTIVADO]\033[0m"
+GPIO_SECOND_ACTIVATED_MSG = f"\033[31m[GPIO {GPIO_SECOND_PIN} ACTIVADO]\033[0m"
 
 _bus: Optional[smbus.SMBus] = None
 
@@ -126,6 +128,7 @@ def main():
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
         GPIO.setup(GPIO_PIN, GPIO.OUT, initial=GPIO.LOW)
+        GPIO.setup(GPIO_SECOND_PIN, GPIO.OUT, initial=GPIO.LOW)
         gpio_initialized = True
 
         filename = f"mpu6050_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
@@ -177,7 +180,9 @@ def main():
                             if quiet_count == 2 and not signal_sent:
                                 print("Segunda detección de aceleracion cero")
                                 GPIO.output(GPIO_PIN, GPIO.HIGH)
+                                GPIO.output(GPIO_SECOND_PIN, GPIO.HIGH)
                                 print(GPIO_ACTIVATED_MSG)
+                                print(GPIO_SECOND_ACTIVATED_MSG)
                                 signal_sent = True
                                 break
 
@@ -201,6 +206,7 @@ def main():
     finally:
         if gpio_initialized:
             GPIO.output(GPIO_PIN, GPIO.LOW)
+            GPIO.output(GPIO_SECOND_PIN, GPIO.LOW)
             GPIO.cleanup()
 
 if __name__ == "__main__":
