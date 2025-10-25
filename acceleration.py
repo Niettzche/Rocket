@@ -22,8 +22,8 @@ DT_SLEEP = 0.05
 #--Config de la aceleracion
 TOLERANCE = 0.05   
 QUIET_DELAY = 1.0
-GPIO_PIN = 16
-GPIO_ACTIVATED_MSG = "\033[31m[GPIO 16 ACTIVADO]\033[0m"
+GPIO_PIN = 26
+GPIO_ACTIVATED_MSG = "\033[31m[GPIO 26 ACTIVADO]\033[0m"
 
 _bus: Optional[smbus.SMBus] = None
 
