@@ -9,6 +9,8 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from logger import log, log_payload
 from sensor_messages import SensorMessage, build_payload
+from zero_accel_gpio import activate as gpio_activate
+from zero_accel_gpio import cleanup as gpio_cleanup
 
 ZERO_ACCEL_REF = 1.0
 ZERO_ACCEL_TOLERANCE = 0.05
@@ -82,59 +84,64 @@ def aggregator_loop(
     last_emit = 0.0
     zero_acc_count = 0
     zero_acc_last_detection = 0.0
-    while not stop_event.is_set():
-        try:
-            message = inbox.get(timeout=0.2)
-        except queue.Empty:
-            continue
-        tracker.update(message.sensor, bool(message.data.get("dummy", False)))
-        magnitude: Optional[float] = None
-        if message.sensor == "mpu6050":
-            accel = message.data.get("accel_g")
-            if isinstance(accel, dict):
-                ax_raw = accel.get("ax", accel.get("x", 0.0))
-                ay_raw = accel.get("ay", accel.get("y", 0.0))
-                az_raw = accel.get("az", accel.get("z", 0.0))
-                try:
-                    ax = float(ax_raw)
-                    ay = float(ay_raw)
-                    az = float(az_raw)
-                except (TypeError, ValueError):
-                    ax = ay = az = 0.0
-                magnitude = math.sqrt(ax * ax + ay * ay + az * az)
-        if (
-            message.sensor == "mpu6050"
-            and magnitude is not None
-            and not tracker.zero_accel_signal_sent()
-            and not message.data.get("dummy", False)
-        ):
-            if abs(magnitude - ZERO_ACCEL_REF) <= ZERO_ACCEL_TOLERANCE:
-                if message.timestamp - zero_acc_last_detection > ZERO_ACCEL_MIN_DELAY:
-                    zero_acc_count += 1
-                    zero_acc_last_detection = message.timestamp
-                    log(
-                        "MPU6050",
-                        f"Detección {zero_acc_count}: sin aceleración lineal (|a|={magnitude:.3f}g)",
-                        "INFO",
-                    )
-                    if zero_acc_count >= ZERO_ACCEL_REQUIRED:
-                        tracker.record_zero_accel_signal(message.timestamp, magnitude)
+    try:
+        while not stop_event.is_set():
+            try:
+                message = inbox.get(timeout=0.2)
+            except queue.Empty:
+                continue
+            tracker.update(message.sensor, bool(message.data.get("dummy", False)))
+            magnitude: Optional[float] = None
+            if message.sensor == "mpu6050":
+                accel = message.data.get("accel_g")
+                if isinstance(accel, dict):
+                    ax_raw = accel.get("ax", accel.get("x", 0.0))
+                    ay_raw = accel.get("ay", accel.get("y", 0.0))
+                    az_raw = accel.get("az", accel.get("z", 0.0))
+                    try:
+                        ax = float(ax_raw)
+                        ay = float(ay_raw)
+                        az = float(az_raw)
+                    except (TypeError, ValueError):
+                        ax = ay = az = 0.0
+                    magnitude = math.sqrt(ax * ax + ay * ay + az * az)
+            if (
+                message.sensor == "mpu6050"
+                and magnitude is not None
+                and not tracker.zero_accel_signal_sent()
+                and not message.data.get("dummy", False)
+            ):
+                if abs(magnitude - ZERO_ACCEL_REF) <= ZERO_ACCEL_TOLERANCE:
+                    if message.timestamp - zero_acc_last_detection > ZERO_ACCEL_MIN_DELAY:
+                        zero_acc_count += 1
+                        zero_acc_last_detection = message.timestamp
                         log(
                             "MPU6050",
-                            "Señal registrada por aceleración cero",
-                            "WARN",
+                            f"Detección {zero_acc_count}: sin aceleración lineal (|a|={magnitude:.3f}g)",
+                            "INFO",
                         )
-        latest[message.sensor] = message
-        now = time.time()
-        if now - last_emit < emit_every:
-            continue
-        payload = build_payload(latest, expected, now)
-        log_payload(payload)
-        try:
-            send_payload(payload)
-        except Exception as exc:
-            log("LORA", f"error inesperado al enviar uwu: {exc}", "ERROR", sys.stderr)
-        last_emit = now
+                        if zero_acc_count >= ZERO_ACCEL_REQUIRED:
+                            tracker.record_zero_accel_signal(message.timestamp, magnitude)
+                            if gpio_activate():
+                                log("MPU6050", "GPIO 12 y 7 activados uwu", "WARN")
+                            log(
+                                "MPU6050",
+                                "Señal registrada por aceleración cero",
+                                "WARN",
+                            )
+            latest[message.sensor] = message
+            now = time.time()
+            if now - last_emit < emit_every:
+                continue
+            payload = build_payload(latest, expected, now)
+            log_payload(payload)
+            try:
+                send_payload(payload)
+            except Exception as exc:
+                log("LORA", f"error inesperado al enviar uwu: {exc}", "ERROR", sys.stderr)
+            last_emit = now
+    finally:
+        gpio_cleanup()
 
 def create_aggregator_thread(
     inbox: queue.Queue[SensorMessage],
