@@ -205,9 +205,12 @@ def main():
                 print("Lectura detenida por el usuario.")
     finally:
         if gpio_initialized:
-            GPIO.output(GPIO_PIN, GPIO.LOW)
-            GPIO.output(GPIO_SECOND_PIN, GPIO.LOW)
-            GPIO.cleanup()
+            if signal_sent:
+                print("GPIO mantenido en HIGH; recuerde reiniciar manualmente si es necesario.")
+            else:
+                GPIO.output(GPIO_PIN, GPIO.LOW)
+                GPIO.output(GPIO_SECOND_PIN, GPIO.LOW)
+                GPIO.cleanup()
 
 if __name__ == "__main__":
     main()
