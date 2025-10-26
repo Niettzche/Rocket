@@ -20,7 +20,7 @@ SMOOTHING = 0.9
 DT_SLEEP = 0.05         
 
 #--Config de la aceleracion
-TOLERANCE = 0.05   
+TOLERANCE = 0.04   
 QUIET_DELAY = 1.0
 GPIO_PIN = 12
 GPIO_SECOND_PIN = 7
@@ -183,6 +183,8 @@ def main():
                                 GPIO.output(GPIO_SECOND_PIN, GPIO.HIGH)
                                 print(GPIO_ACTIVATED_MSG)
                                 print(GPIO_SECOND_ACTIVATED_MSG)
+                                print("[INFO] HACIENDO TIME SLEEP UWU")
+                                time.sleep(60)
                                 signal_sent = True
                                 break
 
