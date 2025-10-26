@@ -9,8 +9,16 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from logger import log, log_payload
 from sensor_messages import SensorMessage, build_payload
-from zero_accel_gpio import activate as gpio_activate
-from zero_accel_gpio import cleanup as gpio_cleanup
+try:
+    from zero_accel_gpio import activate as gpio_activate
+    from zero_accel_gpio import cleanup as gpio_cleanup
+except Exception:
+    def gpio_activate() -> bool:
+        log("MPU6050", "GPIO no disponible, omitiendo activación física uwu", "WARN")
+        return False
+
+    def gpio_cleanup() -> None:
+        log("MPU6050", "GPIO no disponible, nada que limpiar uwu", "DEBUG")
 
 ZERO_ACCEL_REF = 1.0
 ZERO_ACCEL_TOLERANCE = 0.05
