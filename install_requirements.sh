@@ -158,37 +158,19 @@ PY
 )"
   local makefile_path="${LORALIB_DIR}/Makefile"
   if [[ -f "${makefile_path}" ]]; then
-    log_info "Actualizando Makefile de loralib con rutas de Python"
-    if ! python3 - "${makefile_path}" "${py_version}" "${py_include}" "${py_lib_dir}" <<'PY'
-import pathlib
-import sys
-
-makefile = pathlib.Path(sys.argv[1])
-py_version = sys.argv[2]
-py_include = sys.argv[3]
-py_lib = sys.argv[4]
-
-text = makefile.read_text()
-original = text
-
-replacements = [
-    ('python3.7', f'python{py_version}'),
-]
-if py_include:
-    replacements.append(('/usr/include/python3.7', py_include.rstrip('/')))
-if py_lib:
-    replacements.append(('/usr/lib/python3.7', py_lib.rstrip('/')))
-
-for old, new in replacements:
-    text = text.replace(old, new)
-
-if text != original:
-    makefile.write_text(text)
-else:
-    raise SystemExit(1)
-PY
-    then
-      log_warn "No se pudieron ajustar rutas automáticamente; revisa ${makefile_path} si la compilación falla."
+    log_info "Ajustando Makefile de loralib con rutas de Python usando sed"
+    local sed_status=0
+    local escaped_include="${py_include}"
+    local escaped_lib="${py_lib_dir}"
+    if [[ -n "${escaped_include}" ]]; then
+      sed -i "s|/usr/include/python3.7|${escaped_include}|g" "${makefile_path}" || sed_status=1
+    fi
+    if [[ -n "${escaped_lib}" ]]; then
+      sed -i "s|/usr/lib/python3.7|${escaped_lib}|g" "${makefile_path}" || sed_status=1
+    fi
+    sed -i "s|python3.7|python${py_version}|g" "${makefile_path}" || sed_status=1
+    if [[ "${sed_status}" -ne 0 ]]; then
+      log_warn "Sed no pudo actualizar completamente el Makefile; revisa ${makefile_path} si la compilación falla."
     fi
   else
     log_warn "No se encontró Makefile en ${LORALIB_DIR}; omitiendo ajuste automático."
