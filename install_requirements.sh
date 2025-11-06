@@ -144,8 +144,42 @@ setup_loralib() {
 
   local py_version
   py_version="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+  local makefile_path="${LORALIB_DIR}/Makefile"
+  if [[ -f "${makefile_path}" ]]; then
+    log_info "Ajustando Makefile de loralib para Python ${py_version}"
+    if ! python3 - "${makefile_path}" "${py_version}" <<'PY'
+import pathlib, re, sys
+makefile = pathlib.Path(sys.argv[1])
+py_version = sys.argv[2]
+pattern = re.compile(r'python3\.7')
+text = makefile.read_text()
+updated = pattern.sub(f'python{py_version}', text)
+if text != updated:
+    makefile.write_text(updated)
+else:
+    raise SystemExit(1)
+PY
+    then
+      log_warn "No se realizaron cambios automáticos al Makefile; revisa ${makefile_path} si la compilación falla."
+    fi
+  else
+    log_warn "No se encontró Makefile en ${LORALIB_DIR}; omitiendo ajuste automático."
+  fi
+
+  local py_lib_dir
+  py_lib_dir="$(python3 - <<'PY'
+import sysconfig
+libdir = sysconfig.get_config_var("LIBDIR")
+print(libdir if libdir else "")
+PY
+)"
+  if [[ -n "${py_lib_dir}" ]]; then
+    log_info "Usando librerías de Python en ${py_lib_dir}"
+    export PYTHON_LIB_DIR="${py_lib_dir}"
+  fi
+
   log_info "Compilando loralib para Python ${py_version}"
-  make -C "${LORALIB_DIR}" all PYTHON_VERSION="${py_version}"
+  make -C "${LORALIB_DIR}" all PYTHON_VERSION="${py_version}" PYTHON_LIB_DIR="${PYTHON_LIB_DIR:-}"
 
   log_info "Para usar loralib, exporta PYTHONPATH añadiendo:"
   printf 'export PYTHONPATH="%s:${PYTHONPATH}"\n' "${LORALIB_DIR}"
