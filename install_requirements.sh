@@ -20,6 +20,7 @@ readonly APT_PACKAGES=(
   python3
   python3-venv
   python3-pip
+  python3-dev
   python3-smbus
   python3-rpi.gpio
   wiringpi
@@ -127,6 +128,7 @@ setup_wiringpi() {
 setup_loralib() {
   require_command git
   require_command make
+  require_command python3
 
   mkdir -p "$(dirname "${LORALIB_DIR}")"
 
@@ -140,8 +142,10 @@ setup_loralib() {
     git -C "${LORALIB_DIR}" pull --ff-only
   fi
 
-  log_info "Compilando loralib"
-  make -C "${LORALIB_DIR}" all
+  local py_version
+  py_version="$(python3 -c 'import sys; print(f\"{sys.version_info.major}.{sys.version_info.minor}\")')"
+  log_info "Compilando loralib para Python ${py_version}"
+  make -C "${LORALIB_DIR}" all PYTHON_VERSION="${py_version}"
 
   log_info "Para usar loralib, exporta PYTHONPATH añadiendo:"
   printf 'export PYTHONPATH="%s:${PYTHONPATH}"\n' "${LORALIB_DIR}"
