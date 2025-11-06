@@ -143,7 +143,7 @@ setup_loralib() {
   fi
 
   local py_version
-  py_version="$(python3 -c 'import sys; print(f\"{sys.version_info.major}.{sys.version_info.minor}\")')"
+  py_version="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
   log_info "Compilando loralib para Python ${py_version}"
   make -C "${LORALIB_DIR}" all PYTHON_VERSION="${py_version}"
 
