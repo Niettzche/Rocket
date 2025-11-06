@@ -9,6 +9,9 @@ readonly LORALIB_REPO="${LORALIB_REPO:-https://github.com/wdomski/LoRa-Raspberry
 readonly LORALIB_REF="${LORALIB_REF:-master}"
 readonly LORALIB_DIR="${REPO_ROOT}/external/LoRa-RaspberryPi"
 readonly REQUIREMENTS_FILE="${REPO_ROOT}/requirements.txt"
+readonly WIRINGPI_REPO="${WIRINGPI_REPO:-https://github.com/WiringPi/WiringPi.git}"
+readonly WIRINGPI_REF="${WIRINGPI_REF:-master}"
+readonly WIRINGPI_DIR="${REPO_ROOT}/external/WiringPi"
 readonly COLOR_RESET=$'\033[0m'
 readonly COLOR_INFO=$'\033[1;36m'
 readonly COLOR_WARN=$'\033[1;33m'
@@ -90,6 +93,37 @@ install_python_packages() {
   fi
 }
 
+setup_wiringpi() {
+  require_command git
+
+  mkdir -p "$(dirname "${WIRINGPI_DIR}")"
+
+  if [[ ! -d "${WIRINGPI_DIR}/.git" ]]; then
+    log_info "Clonando WiringPi (${WIRINGPI_REF}) en ${WIRINGPI_DIR}"
+    git clone --depth 1 --branch "${WIRINGPI_REF}" "${WIRINGPI_REPO}" "${WIRINGPI_DIR}"
+  else
+    log_info "Actualizando WiringPi"
+    git -C "${WIRINGPI_DIR}" fetch --depth 1 origin "${WIRINGPI_REF}"
+    git -C "${WIRINGPI_DIR}" checkout "${WIRINGPI_REF}"
+    git -C "${WIRINGPI_DIR}" pull --ff-only
+  fi
+
+  local build_script="${WIRINGPI_DIR}/build"
+  if [[ -x "${build_script}" ]]; then
+    if [[ "$(id -u)" -eq 0 ]]; then
+      log_info "Instalando WiringPi ejecutando ${build_script}"
+      (cd "${WIRINGPI_DIR}" && "${build_script}")
+    elif command -v sudo >/dev/null 2>&1; then
+      log_info "Instalando WiringPi con sudo ${build_script}"
+      (cd "${WIRINGPI_DIR}" && sudo "${build_script}")
+    else
+      log_warn "Se requiere privilegio de administrador para instalar WiringPi; ejecuta ${build_script} manualmente."
+    fi
+  else
+    log_warn "No se encontró script de build en WiringPi; revisa ${WIRINGPI_DIR} para instrucciones manuales."
+  fi
+}
+
 setup_loralib() {
   require_command git
   require_command make
@@ -132,6 +166,7 @@ install_web_dependencies() {
 main() {
   install_apt_dependencies
   install_python_packages
+  setup_wiringpi
   setup_loralib
   install_web_dependencies
 
