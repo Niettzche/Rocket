@@ -5,9 +5,10 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="${SCRIPT_DIR}"
 readonly VENV_DIR="${REPO_ROOT}/.venv"
-readonly LORALIB_REPO="${LORALIB_REPO:-https://github.com/HelTecAutomation/LoRa-RaspberryPi.git}"
+readonly LORALIB_REPO="${LORALIB_REPO:-https://github.com/wdomski/LoRa-RaspberryPi.git}"
 readonly LORALIB_REF="${LORALIB_REF:-master}"
 readonly LORALIB_DIR="${REPO_ROOT}/external/LoRa-RaspberryPi"
+readonly REQUIREMENTS_FILE="${REPO_ROOT}/requirements.txt"
 readonly APT_PACKAGES=(
   python3
   python3-venv
@@ -18,10 +19,6 @@ readonly APT_PACKAGES=(
   build-essential
   make
   git
-)
-readonly PIP_PACKAGES=(
-  pyserial
-  pynmea2
 )
 
 log() {
@@ -73,8 +70,12 @@ install_python_packages() {
   log "Actualizando pip en el entorno virtual"
   "${pip_bin}" install --upgrade pip
 
-  log "Instalando paquetes de Python: ${PIP_PACKAGES[*]}"
-  "${pip_bin}" install "${PIP_PACKAGES[@]}"
+  if [[ -f "${REQUIREMENTS_FILE}" ]]; then
+    log "Instalando dependencias de Python desde ${REQUIREMENTS_FILE}"
+    "${pip_bin}" install -r "${REQUIREMENTS_FILE}"
+  else
+    log "No se encontró ${REQUIREMENTS_FILE}; omitiendo instalación de paquetes de Python."
+  fi
 }
 
 setup_loralib() {
@@ -84,10 +85,10 @@ setup_loralib() {
   mkdir -p "$(dirname "${LORALIB_DIR}")"
 
   if [[ ! -d "${LORALIB_DIR}/.git" ]]; then
-    log "Clonando HelTec LoRa-RaspberryPi (${LORALIB_REF}) en ${LORALIB_DIR}"
+    log "Clonando LoRa-RaspberryPi (${LORALIB_REF}) en ${LORALIB_DIR}"
     git clone --depth 1 --branch "${LORALIB_REF}" "${LORALIB_REPO}" "${LORALIB_DIR}"
   else
-    log "Actualizando HelTec LoRa-RaspberryPi"
+    log "Actualizando LoRa-RaspberryPi"
     git -C "${LORALIB_DIR}" fetch --depth 1 origin "${LORALIB_REF}"
     git -C "${LORALIB_DIR}" checkout "${LORALIB_REF}"
     git -C "${LORALIB_DIR}" pull --ff-only
