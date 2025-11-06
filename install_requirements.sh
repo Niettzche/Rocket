@@ -144,42 +144,71 @@ setup_loralib() {
 
   local py_version
   py_version="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+  local py_include
+  py_include="$(python3 - <<'PY'
+import sysconfig
+print(sysconfig.get_path("include") or "")
+PY
+)"
+  local py_lib_dir
+  py_lib_dir="$(python3 - <<'PY'
+import sysconfig
+print(sysconfig.get_config_var("LIBDIR") or "")
+PY
+)"
   local makefile_path="${LORALIB_DIR}/Makefile"
   if [[ -f "${makefile_path}" ]]; then
-    log_info "Ajustando Makefile de loralib para Python ${py_version}"
-    if ! python3 - "${makefile_path}" "${py_version}" <<'PY'
-import pathlib, re, sys
+    log_info "Actualizando Makefile de loralib con rutas de Python"
+    if ! python3 - "${makefile_path}" "${py_version}" "${py_include}" "${py_lib_dir}" <<'PY'
+import pathlib
+import sys
+
 makefile = pathlib.Path(sys.argv[1])
 py_version = sys.argv[2]
-pattern = re.compile(r'python3\.7')
+py_include = sys.argv[3]
+py_lib = sys.argv[4]
+
 text = makefile.read_text()
-updated = pattern.sub(f'python{py_version}', text)
-if text != updated:
-    makefile.write_text(updated)
+original = text
+
+replacements = [
+    ('python3.7', f'python{py_version}'),
+]
+if py_include:
+    replacements.append(('/usr/include/python3.7', py_include.rstrip('/')))
+if py_lib:
+    replacements.append(('/usr/lib/python3.7', py_lib.rstrip('/')))
+
+for old, new in replacements:
+    text = text.replace(old, new)
+
+if text != original:
+    makefile.write_text(text)
 else:
     raise SystemExit(1)
 PY
     then
-      log_warn "No se realizaron cambios automáticos al Makefile; revisa ${makefile_path} si la compilación falla."
+      log_warn "No se pudieron ajustar rutas automáticamente; revisa ${makefile_path} si la compilación falla."
     fi
   else
     log_warn "No se encontró Makefile en ${LORALIB_DIR}; omitiendo ajuste automático."
   fi
 
-  local py_lib_dir
-  py_lib_dir="$(python3 - <<'PY'
-import sysconfig
-libdir = sysconfig.get_config_var("LIBDIR")
-print(libdir if libdir else "")
-PY
-)"
+  if [[ -n "${py_include}" ]]; then
+    log_info "Incluyendo headers de Python desde ${py_include}"
+    export PYTHON_INC_OVERRIDE="${py_include}"
+  fi
+
   if [[ -n "${py_lib_dir}" ]]; then
-    log_info "Usando librerías de Python en ${py_lib_dir}"
-    export PYTHON_LIB_DIR="${py_lib_dir}"
+    log_info "Incluyendo librerías de Python desde ${py_lib_dir}"
+    export PYTHON_LIB_OVERRIDE="${py_lib_dir}"
   fi
 
   log_info "Compilando loralib para Python ${py_version}"
-  make -C "${LORALIB_DIR}" all PYTHON_VERSION="${py_version}" PYTHON_LIB_DIR="${PYTHON_LIB_DIR:-}"
+  make -C "${LORALIB_DIR}" all \
+    PYTHON_VERSION="${py_version}" \
+    PYTHON_INC="${PYTHON_INC_OVERRIDE:-}" \
+    PYTHON_LIB="${PYTHON_LIB_OVERRIDE:-}"
 
   log_info "Para usar loralib, exporta PYTHONPATH añadiendo:"
   printf 'export PYTHONPATH="%s:${PYTHONPATH}"\n' "${LORALIB_DIR}"
