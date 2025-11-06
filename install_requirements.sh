@@ -9,6 +9,10 @@ readonly LORALIB_REPO="${LORALIB_REPO:-https://github.com/wdomski/LoRa-Raspberry
 readonly LORALIB_REF="${LORALIB_REF:-master}"
 readonly LORALIB_DIR="${REPO_ROOT}/external/LoRa-RaspberryPi"
 readonly REQUIREMENTS_FILE="${REPO_ROOT}/requirements.txt"
+readonly COLOR_RESET=$'\033[0m'
+readonly COLOR_INFO=$'\033[1;36m'
+readonly COLOR_WARN=$'\033[1;33m'
+readonly COLOR_ERROR=$'\033[1;31m'
 readonly APT_PACKAGES=(
   python3
   python3-venv
@@ -21,21 +25,29 @@ readonly APT_PACKAGES=(
   git
 )
 
-log() {
-  printf '[setup] %s\n' "$*"
+log_info() {
+  printf '%s[setup]%s %s\n' "${COLOR_INFO}" "${COLOR_RESET}" "$*"
+}
+
+log_warn() {
+  printf '%s[setup]%s %s\n' "${COLOR_WARN}" "${COLOR_RESET}" "$*"
+}
+
+log_error() {
+  printf '%s[setup]%s %s\n' "${COLOR_ERROR}" "${COLOR_RESET}" "$*" 1>&2
 }
 
 require_command() {
   local cmd="$1"
   if ! command -v "${cmd}" >/dev/null 2>&1; then
-    log "El comando requerido '${cmd}' no está disponible. Instálalo manualmente e intenta de nuevo."
+    log_error "El comando requerido '${cmd}' no está disponible. Instálalo manualmente e intenta de nuevo."
     exit 1
   fi
 }
 
 install_apt_dependencies() {
   if ! command -v apt-get >/dev/null 2>&1; then
-    log "Sistema sin apt-get; omitiendo instalación de paquetes de sistema."
+    log_warn "Sistema sin apt-get; omitiendo instalación de paquetes de sistema."
     return
   fi
 
@@ -44,12 +56,12 @@ install_apt_dependencies() {
     if command -v sudo >/dev/null 2>&1; then
       apt_cmd=(sudo apt-get)
     else
-      log "Necesitas privilegios de administrador para instalar dependencias del sistema."
+      log_error "Necesitas privilegios de administrador para instalar dependencias del sistema."
       exit 1
     fi
   fi
 
-  log "Instalando paquetes de sistema: ${APT_PACKAGES[*]}"
+  log_info "Instalando paquetes de sistema: ${APT_PACKAGES[*]}"
   "${apt_cmd[@]}" update
   "${apt_cmd[@]}" install -y --no-install-recommends "${APT_PACKAGES[@]}"
 }
@@ -58,7 +70,7 @@ ensure_virtualenv() {
   require_command python3
 
   if [[ ! -d "${VENV_DIR}" ]]; then
-    log "Creando entorno virtual en ${VENV_DIR}"
+    log_info "Creando entorno virtual en ${VENV_DIR}"
     python3 -m venv "${VENV_DIR}"
   fi
 }
@@ -67,14 +79,14 @@ install_python_packages() {
   ensure_virtualenv
 
   local pip_bin="${VENV_DIR}/bin/pip"
-  log "Actualizando pip en el entorno virtual"
+  log_info "Actualizando pip en el entorno virtual"
   "${pip_bin}" install --upgrade pip
 
   if [[ -f "${REQUIREMENTS_FILE}" ]]; then
-    log "Instalando dependencias de Python desde ${REQUIREMENTS_FILE}"
+    log_info "Instalando dependencias de Python desde ${REQUIREMENTS_FILE}"
     "${pip_bin}" install -r "${REQUIREMENTS_FILE}"
   else
-    log "No se encontró ${REQUIREMENTS_FILE}; omitiendo instalación de paquetes de Python."
+    log_warn "No se encontró ${REQUIREMENTS_FILE}; omitiendo instalación de paquetes de Python."
   fi
 }
 
@@ -85,35 +97,35 @@ setup_loralib() {
   mkdir -p "$(dirname "${LORALIB_DIR}")"
 
   if [[ ! -d "${LORALIB_DIR}/.git" ]]; then
-    log "Clonando LoRa-RaspberryPi (${LORALIB_REF}) en ${LORALIB_DIR}"
+    log_info "Clonando LoRa-RaspberryPi (${LORALIB_REF}) en ${LORALIB_DIR}"
     git clone --depth 1 --branch "${LORALIB_REF}" "${LORALIB_REPO}" "${LORALIB_DIR}"
   else
-    log "Actualizando LoRa-RaspberryPi"
+    log_info "Actualizando LoRa-RaspberryPi"
     git -C "${LORALIB_DIR}" fetch --depth 1 origin "${LORALIB_REF}"
     git -C "${LORALIB_DIR}" checkout "${LORALIB_REF}"
     git -C "${LORALIB_DIR}" pull --ff-only
   fi
 
-  log "Compilando loralib"
+  log_info "Compilando loralib"
   make -C "${LORALIB_DIR}" all
 
-  log "Para usar loralib, exporta PYTHONPATH añadiendo:"
+  log_info "Para usar loralib, exporta PYTHONPATH añadiendo:"
   printf 'export PYTHONPATH="%s:${PYTHONPATH}"\n' "${LORALIB_DIR}"
 }
 
 install_web_dependencies() {
   local web_dir="${REPO_ROOT}/receptor_arudino/webpage"
   if [[ ! -f "${web_dir}/package.json" ]]; then
-    log "No se encontró interfaz web React; omitiendo dependencias de npm."
+    log_warn "No se encontró interfaz web React; omitiendo dependencias de npm."
     return
   fi
 
   if ! command -v npm >/dev/null 2>&1; then
-    log "npm no está instalado; omitiendo dependencias de la interfaz web."
+    log_warn "npm no está instalado; omitiendo dependencias de la interfaz web."
     return
   fi
 
-  log "Instalando dependencias de la interfaz web (npm install)"
+  log_info "Instalando dependencias de la interfaz web (npm install)"
   (cd "${web_dir}" && npm install)
 }
 
