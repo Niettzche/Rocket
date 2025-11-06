@@ -54,7 +54,7 @@ function ValueBarChart({
           />
         )}
       </div>
-      <div className="chart__value-display">
+      <div className="chart__value-display chart__value-display--compact">
         <span>
           {formatValue(value, decimals)}
           {unit ? ` ${unit}` : ''}

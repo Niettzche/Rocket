@@ -1,12 +1,33 @@
-import { useEffect, useMemo, useState } from 'react';
-import Header from './components/Header.jsx';
+import { useEffect, useState } from 'react';
 import SensorCard from './components/SensorCard.jsx';
 import AxisTrackChart from './components/AxisTrackChart.jsx';
 import ValueBarChart from './components/ValueBarChart.jsx';
 import OrientationVisualizer from './components/OrientationVisualizer.jsx';
-import TelemetryTerminal from './components/TelemetryTerminal.jsx';
+import UwUCard from './components/UwUCard.jsx';
+import CommandTerminal from './components/CommandTerminal.jsx';
 import payload from '../lora_payload_sample.json';
-import backgroundUrl from '/background.jpg?url';
+import logo from './assets/logo.png';
+
+const ensureTrailingSlash = (value) => (value.endsWith('/') ? value : `${value}/`);
+
+const resolvePublicAsset = (fileName) => {
+  const base = ensureTrailingSlash(import.meta.env.BASE_URL ?? './');
+  const fallback = `${base}${fileName}`;
+
+  if (typeof window === 'undefined' || !window.location?.href || window.location.href === 'about:blank') {
+    return fallback;
+  }
+
+  try {
+    return new URL(fileName, window.location.href).href;
+  } catch (error) {
+    console.warn(`No se pudo resolver la ruta de ${fileName}:`, error);
+    return fallback;
+  }
+};
+
+const backgroundUrl = resolvePublicAsset('background.jpg');
+const logoUrl = logo;
 
 const formatTimestamp = (iso) => {
   if (!iso) return 'Sin dato';
@@ -16,6 +37,7 @@ const formatTimestamp = (iso) => {
 
 function App() {
   const [isReady, setIsReady] = useState(false);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const {
     reported_at: reportedAt,
     sensors: { mpu6050, neo6m },
@@ -36,51 +58,14 @@ function App() {
     return value.toFixed(decimals);
   };
 
-  const terminalMessages = useMemo(() => {
-    if (!mpu6050 || !neo6m) {
-      return [];
-    }
-
-    const lines = [];
-    lines.push(
-      `[${formatTimeShort(reportedAt)}] paquete LoRa recibido; timestamp=${formatTimestamp(reportedAt)}`,
-    );
-    lines.push(
-      `mpu.accel_g ax=${toFixed(mpu6050.accel_g?.ax, 3)}g ay=${toFixed(
-        mpu6050.accel_g?.ay,
-        3,
-      )}g az=${toFixed(mpu6050.accel_g?.az, 3)}g`,
-    );
-    lines.push(
-      `mpu.gyro_dps gx=${toFixed(mpu6050.gyro_dps?.gx, 2)}°/s gy=${toFixed(
-        mpu6050.gyro_dps?.gy,
-        2,
-      )}°/s gz=${toFixed(mpu6050.gyro_dps?.gz, 2)}°/s`,
-    );
-    lines.push(
-      `mpu.attitude pitch=${toFixed(mpu6050.attitude_deg?.pitch, 2)}° roll=${toFixed(
-        mpu6050.attitude_deg?.roll,
-        2,
-      )}° yaw=${toFixed(mpu6050.attitude_deg?.yaw, 2)}°`,
-    );
-    lines.push(
-      `gps.coords lat=${toFixed(neo6m.latitude, 5)} lon=${toFixed(neo6m.longitude, 5)} alt=${toFixed(
-        neo6m.altitude,
-        1,
-      )}m`,
-    );
-    lines.push(`gps.fix ${formatTimestamp(neo6m.fix_time)}`);
-    if (neo6m.raw) {
-      lines.push(`gps.nmea ${neo6m.raw}`);
-    }
-
-    return lines;
-  }, [mpu6050, neo6m, reportedAt]);
-
   useEffect(() => {
     let isMounted = true;
     let readyTimeout;
     const pendingListeners = [];
+
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--body-bg-image', `url("${backgroundUrl}")`);
+    }
 
     const waitForWindow = new Promise((resolve) => {
       if (document.readyState === 'complete') {
@@ -177,12 +162,40 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const isTrigger = (event.ctrlKey || event.metaKey) && event.key?.toLowerCase() === 't';
+      if (!isTrigger) {
+        return;
+      }
+
+      const target = event.target;
+      const isEditable =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable;
+
+      if (isEditable) {
+        return;
+      }
+
+      event.preventDefault();
+      setIsTerminalOpen(true);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <div className="app-shell">
       {!isReady && (
         <div className="splash-screen" role="status" aria-live="polite">
           <div className="splash__logo-wrap">
-            <img src="/logo.png" alt="Logotipo del cohete Promesa" />
+            <img src={logoUrl} alt="Logotipo del programa Dynx" />
             <span className="splash__ring" aria-hidden />
           </div>
           <p className="splash__label">Inicializando telemetría…</p>
@@ -190,7 +203,6 @@ function App() {
       )}
 
       <div className={`app ${isReady ? 'app--ready' : 'app--loading'}`}>
-        <Header lastUpdate={formatTimestamp(reportedAt)} />
         <main className="app__content">
           <div className="sensor-grid">
             <SensorCard
@@ -198,7 +210,7 @@ function App() {
               title="MPU6050"
               subtitle={`Capturado el ${formatTimestamp(mpu6050.timestamp)}`}
             >
-              <div className="charts-grid">
+              <div className="charts-grid charts-grid--mpu">
                 <OrientationVisualizer
                   pitch={mpu6050.attitude_deg.pitch}
                   roll={mpu6050.attitude_deg.roll}
@@ -288,12 +300,17 @@ function App() {
               </div>
             </SensorCard>
 
-            <div className="terminal-panel" id="terminal">
-              <TelemetryTerminal messages={terminalMessages} interval={2400} />
-            </div>
+            <UwUCard />
           </div>
         </main>
       </div>
+      <CommandTerminal
+        open={isTerminalOpen}
+        onClose={() => setIsTerminalOpen(false)}
+        mpu6050={mpu6050}
+        neo6m={neo6m}
+        reportedAt={reportedAt}
+      />
     </div>
   );
 }

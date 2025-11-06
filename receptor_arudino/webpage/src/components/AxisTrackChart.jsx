@@ -20,69 +20,47 @@ function AxisTrackChart({
   decimals = 2,
   title,
 }) {
-  const width = 240;
-  const rowHeight = 32;
-  const padding = 18;
-  const height = data.length * rowHeight + padding * 2;
-  const zeroX = ((0 - min) / (max - min)) * width;
+  const range = max - min || 1;
+  const zeroRatio = min < 0 && max > 0 ? (0 - min) / range : null;
 
   return (
     <div className="chart chart--axis">
       {title && <h5 className="chart__title">{title}</h5>}
-      <svg
-        className="chart__surface"
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label={title || 'Gráfica de ejes'}
-      >
+      <div className="axis-chart" role="group" aria-label={title || 'Gráfica de ejes'}>
         {data.map((item, index) => {
-          const y = padding + index * rowHeight + rowHeight / 2;
           const value = clamp(item.value, min, max);
-          const xValue = ((value - min) / (max - min)) * width;
           const display = formatValue(item.value, decimals);
+          const valueRatio = (value - min) / range;
+          const valuePct = Math.max(0, Math.min(100, valueRatio * 100));
+          const originPct = zeroRatio != null ? zeroRatio * 100 : min >= 0 ? 0 : 100;
+          const left = Math.min(originPct, valuePct);
+          const fillWidth = Math.max(Math.abs(valuePct - originPct), 1.2);
 
           return (
-            <g key={item.label ?? index} className="chart__row">
-              <line
-                x1={0}
-                x2={width}
-                y1={y}
-                y2={y}
-                className="chart__baseline"
-              />
-              {zeroX >= 0 && zeroX <= width && (
-                <line
-                  x1={zeroX}
-                  x2={zeroX}
-                  y1={y - rowHeight / 2 + 4}
-                  y2={y + rowHeight / 2 - 4}
-                  className="chart__zero"
+            <div key={item.label ?? index} className="axis-chart__row">
+              <span className="axis-chart__label">{item.label}</span>
+              <div className="axis-chart__bar">
+                {zeroRatio != null && (
+                  <span className="axis-chart__zero" style={{ left: `${zeroRatio * 100}%` }} />
+                )}
+                <span
+                  className="axis-chart__fill"
+                  style={{ left: `${left}%`, width: `${fillWidth}%` }}
                 />
-              )}
-              <circle cx={xValue} cy={y} r={5} className="chart__point" />
-              <text
-                x={xValue}
-                y={y - 10}
-                className="chart__value"
-                textAnchor={xValue < width * 0.8 ? 'start' : 'end'}
-                dx={xValue < width * 0.8 ? 8 : -8}
-              >
+                <span className="axis-chart__marker" style={{ left: `${valuePct}%` }} />
+              </div>
+              <span className="axis-chart__value">
                 {display}
                 {unit ? ` ${unit}` : ''}
-              </text>
-              <text x={0} y={y + 14} className="chart__label">
-                {item.label}
-              </text>
-            </g>
+              </span>
+            </div>
           );
         })}
-        <text x={0} y={padding - 6} className="chart__min">
-          {`${formatValue(min, decimals)}${unit ? ` ${unit}` : ''}`}
-        </text>
-        <text x={width} y={padding - 6} className="chart__max" textAnchor="end">
-          {`${formatValue(max, decimals)}${unit ? ` ${unit}` : ''}`}
-        </text>
-      </svg>
+      </div>
+      <div className="axis-chart__scale">
+        <span>{`${formatValue(min, decimals)}${unit ? ` ${unit}` : ''}`}</span>
+        <span>{`${formatValue(max, decimals)}${unit ? ` ${unit}` : ''}`}</span>
+      </div>
     </div>
   );
 }

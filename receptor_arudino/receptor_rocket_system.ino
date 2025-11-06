@@ -1,12 +1,3 @@
-// Wiring reference (adjust pins to match your board / module):
-//   SPI MOSI -> 11 (Arduino Uno) / 23 (ESP32)
-//   SPI MISO -> 12 (Arduino Uno) / 19 (ESP32)
-//   SPI SCK  -> 13 (Arduino Uno) / 18 (ESP32)
-//   LoRa NSS (CS) -> D10 (Arduino Uno) / 5 (ESP32)
-//   LoRa RST      -> D9  (Arduino Uno) / 14 (ESP32)
-//   LoRa DIO0     -> D2  (Arduino Uno) / 26 (ESP32)
-//   GND and 3V3 (o 5V si el módulo lo soporta) conectados al módulo SX127x.
-// Update the pins below with LoRa.setPins(csPin, resetPin, dio0Pin) if your layout differs.
 #include <SPI.h>
 #include <LoRa.h>
 
