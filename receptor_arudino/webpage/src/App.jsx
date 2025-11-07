@@ -5,6 +5,7 @@ import ValueBarChart from './components/ValueBarChart.jsx';
 import OrientationVisualizer from './components/OrientationVisualizer.jsx';
 import UwUCard from './components/UwUCard.jsx';
 import CommandTerminal from './components/CommandTerminal.jsx';
+import SerialMonitor from './components/SerialMonitor.jsx';
 import payload from '../lora_payload_sample.json';
 import logo from './assets/logo.png';
 
@@ -38,6 +39,8 @@ const formatTimestamp = (iso) => {
 function App() {
   const [isReady, setIsReady] = useState(false);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  const [isSerialMonitorOpen, setIsSerialMonitorOpen] = useState(false);
+  const [serialLines, setSerialLines] = useState([]);
   const {
     reported_at: reportedAt,
     sensors: { mpu6050, neo6m },
@@ -163,9 +166,47 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const bridge = window?.telemetryBridge;
+    if (!bridge?.onSerialLine) {
+      return undefined;
+    }
+
+    const unsubscribe = bridge.onSerialLine((payload) => {
+      if (!payload) {
+        return;
+      }
+
+      const text = payload.trimmed ?? payload.text ?? payload.line ?? payload.raw ?? '';
+      if (!text.trim()) {
+        return;
+      }
+
+      setSerialLines((prev) => {
+        const entry = {
+          text,
+          timestamp: payload.timestamp ?? new Date().toISOString(),
+        };
+        const next = [...prev, entry];
+        if (next.length > 250) {
+          next.splice(0, next.length - 250);
+        }
+        return next;
+      });
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (event) => {
-      const isTrigger = (event.ctrlKey || event.metaKey) && event.key?.toLowerCase() === 't';
-      if (!isTrigger) {
+      const isCombo = event.ctrlKey || event.metaKey;
+      if (!isCombo || !event.key) {
         return;
       }
 
@@ -179,8 +220,19 @@ function App() {
         return;
       }
 
-      event.preventDefault();
-      setIsTerminalOpen(true);
+      const key = event.key.toLowerCase();
+
+      if (key === 't') {
+        event.preventDefault();
+        setIsTerminalOpen(true);
+        return;
+      }
+
+      if (key === 's') {
+        event.preventDefault();
+        setIsSerialMonitorOpen(true);
+        return;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -189,6 +241,10 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  const handleClearSerialLines = () => {
+    setSerialLines([]);
+  };
 
   return (
     <div className="app-shell">
@@ -310,6 +366,12 @@ function App() {
         mpu6050={mpu6050}
         neo6m={neo6m}
         reportedAt={reportedAt}
+      />
+      <SerialMonitor
+        open={isSerialMonitorOpen}
+        lines={serialLines}
+        onClose={() => setIsSerialMonitorOpen(false)}
+        onClear={handleClearSerialLines}
       />
     </div>
   );

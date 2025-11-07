@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Selecciona el receptor LoRa</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background-color: #020617;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at top, rgba(14, 116, 144, 0.3), transparent 45%),
+          linear-gradient(145deg, #020617 0%, #0f172a 100%);
+        color: #e2e8f0;
+      }
+
+      .card {
+        width: min(480px, calc(100vw - 2rem));
+        background: rgba(2, 6, 23, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 25px 60px rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(20px);
+      }
+
+      h1 {
+        margin: 0 0 0.4rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+
+      p {
+        margin: 0 0 1.5rem;
+        color: rgba(226, 232, 240, 0.85);
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        color: rgba(226, 232, 240, 0.7);
+        letter-spacing: 0.08em;
+      }
+
+      select {
+        width: 100%;
+        padding: 0.75rem;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background-color: rgba(15, 23, 42, 0.6);
+        color: #e2e8f0;
+        font-size: 1rem;
+        appearance: none;
+      }
+
+      select:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+      }
+
+      button {
+        flex: 1;
+        border: none;
+        border-radius: 999px;
+        padding: 0.85rem 1.2rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 120ms ease, box-shadow 120ms ease;
+      }
+
+      button.primary {
+        background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+        color: #0f172a;
+        box-shadow: 0 15px 35px rgba(14, 165, 233, 0.35);
+      }
+
+      button.secondary {
+        background: rgba(148, 163, 184, 0.2);
+        color: #e2e8f0;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      button:not(:disabled):hover {
+        transform: translateY(-1px);
+      }
+
+      .status {
+        margin-top: 1.2rem;
+        font-size: 0.95rem;
+        min-height: 1.2rem;
+        color: rgba(148, 163, 184, 0.95);
+      }
+
+      .status--error {
+        color: #f87171;
+      }
+
+      .status--success {
+        color: #4ade80;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="card">
+      <h1>Conecta tu receptor</h1>
+      <p>Elige el puerto USB del Arduino Nano antes de cargar la interfaz de telemetría.</p>
+
+      <label for="port-select">Interfaz detectada</label>
+      <select id="port-select"></select>
+
+      <div class="controls">
+        <button id="refresh-btn" class="secondary">Actualizar</button>
+        <button id="auto-btn" class="secondary">Detectar automáticamente</button>
+        <button id="connect-btn" class="primary">Iniciar telemetría</button>
+      </div>
+
+      <p id="status" class="status">Buscando puertos disponibles…</p>
+    </main>
+
+    <script type="module" src="./port-picker.js"></script>
+  </body>
+</html>
+

@@ -1091,3 +1091,119 @@ body::before {
     justify-content: flex-start;
   }
 }
+
+.serial-monitor {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 23, 0.82);
+  backdrop-filter: blur(10px);
+  z-index: 1200;
+  padding: 1.5rem;
+}
+
+.serial-monitor__panel {
+  width: min(900px, 92vw);
+  max-height: 80vh;
+  background: rgba(5, 10, 28, 0.95);
+  border-radius: 1.25rem;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  display: flex;
+  flex-direction: column;
+  padding: 1.35rem 1.5rem;
+  box-shadow: 0 30px 85px rgba(2, 6, 23, 0.7);
+}
+
+.serial-monitor__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.serial-monitor__eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.serial-monitor__header h2 {
+  margin: 0.2rem 0 0;
+  font-size: 1.25rem;
+}
+
+.serial-monitor__close {
+  border: none;
+  padding: 0.6rem 1.3rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  background: rgba(56, 189, 248, 0.12);
+  color: #e0f2fe;
+}
+
+.serial-monitor__log {
+  flex: 1;
+  background: rgba(10, 16, 39, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 0.9rem;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.serial-monitor__log ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.serial-monitor__log li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92rem;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.serial-monitor__timestamp {
+  color: rgba(148, 163, 184, 0.75);
+  min-width: 4.5rem;
+  font-size: 0.85rem;
+}
+
+.serial-monitor__placeholder {
+  margin: 0;
+  color: rgba(148, 163, 184, 0.85);
+  font-style: italic;
+}
+
+.serial-monitor__footer {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.serial-monitor__footer button {
+  border: none;
+  padding: 0.65rem 1.5rem;
+  border-radius: 999px;
+  background: rgba(14, 165, 233, 0.15);
+  color: #e0f2fe;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.serial-monitor__hint {
+  color: rgba(148, 163, 184, 0.8);
+  font-size: 0.85rem;
+}
