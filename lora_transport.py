@@ -178,7 +178,7 @@ def lora_init_tx() -> None:
             f"cargando uwu: TX @ {LORA_FREQ_HZ} Hz, SF{LORA_SF}",
             "SYS",
         )
-    except Exception as exc:
+    except BaseException as exc:
         _LORA_READY = False
         _LORA_INIT_ERROR = str(exc)
         log("LORA", f"no pude inicializar uwu: {exc}", "ERROR", sys.stderr)
@@ -206,7 +206,7 @@ def lora_init_rx() -> None:
             f"cargando uwu: RX @ {LORA_FREQ_HZ} Hz, SF{LORA_SF}",
             "SYS",
         )
-    except Exception as exc:
+    except BaseException as exc:
         _LORA_READY = False
         _LORA_INIT_ERROR = str(exc)
         log("LORA", f"no pude inicializar uwu en modo RX: {exc}", "ERROR", sys.stderr)
