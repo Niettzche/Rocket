@@ -6,7 +6,6 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=dynx
-Group=dynx
 WorkingDirectory=/home/dynx/Rocket
 Environment="PYTHONUNBUFFERED=1"
 Environment="PYTHONPATH=/home/dynx/Rocket/external/LoRa-RaspberryPi:$PYTHONPATH"
