@@ -5,12 +5,12 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=mario
-Group=mario
-WorkingDirectory=/home/mario/rocket_system
+User=dynx
+Group=dynx
+WorkingDirectory=/home/dynx/Rocket
 Environment="PYTHONUNBUFFERED=1"
-Environment="PYTHONPATH=/home/mario/rocket_system/external/LoRa-RaspberryPi:$PYTHONPATH"
-ExecStart=/usr/bin/env python3 -u read_sensors.py
+Environment="PYTHONPATH=/home/dynx/Rocket/external/LoRa-RaspberryPi:$PYTHONPATH"
+ExecStart=/usr/bin/env python3 -u /home/dynx/Rocket/read_sensors.py
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
