@@ -156,6 +156,22 @@ class _FrameAssembler:
 _FRAME_ASSEMBLER = _FrameAssembler(_FRAME_TIMEOUT)
 
 
+def _ensure_init_success(result: Any) -> None:
+    if result is None:
+        return
+    if isinstance(result, int):
+        if result == 0:
+            return
+        raise RuntimeError(f"loralib.init retornó código {result}")
+    if isinstance(result, bool):
+        if result:
+            return
+        raise RuntimeError("loralib.init indicó fallo (False)")
+    message = str(result).strip()
+    if message:
+        raise RuntimeError(message)
+
+
 def lora_init_tx() -> None:
     global _LORA_MODE, _LORA_READY, _WARNED_RX_NOT_READY, _LORA_INIT_ERROR
     if not _LORALIB_AVAILABLE:
@@ -168,7 +184,8 @@ def lora_init_tx() -> None:
         log("LORA", f"no pude inicializar uwu (dependencia faltante): {_LORA_INIT_ERROR}", "ERROR", sys.stderr)
         return
     try:
-        loralib.init(0, LORA_FREQ_HZ, LORA_SF)
+        result = loralib.init(0, LORA_FREQ_HZ, LORA_SF)
+        _ensure_init_success(result)
         _LORA_MODE = MODE_TX
         _LORA_READY = True
         _LORA_INIT_ERROR = None
@@ -196,7 +213,8 @@ def lora_init_rx() -> None:
         log("LORA", f"no pude inicializar uwu en modo RX: {_LORA_INIT_ERROR}", "ERROR", sys.stderr)
         return
     try:
-        loralib.init(1, LORA_FREQ_HZ, LORA_SF)
+        result = loralib.init(1, LORA_FREQ_HZ, LORA_SF)
+        _ensure_init_success(result)
         _LORA_MODE = MODE_RX
         _LORA_READY = True
         _LORA_INIT_ERROR = None

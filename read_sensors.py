@@ -64,7 +64,7 @@ def run() -> None:
     log("SYSTEM", "Preparando LoRa según configuración uwu", "SYS")
     try:
         mode = configure_from_config()
-    except Exception as exc:
+    except BaseException as exc:
         log("SYSTEM", f"Fallo al configurar LoRa, continuo sin radio: {exc}", "ERROR")
         record_init_error(f"configuración fallida: {exc}")
         mode = MODE_TX
