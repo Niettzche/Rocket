@@ -10,10 +10,12 @@ from aggregator import ActivityTracker, create_aggregator_thread
 from logger import log
 from lora_transport import (
     MODE_RX,
+    MODE_TX,
     configure_from_config,
     is_ready,
     receive_loop,
     send_to_lora,
+    record_init_error,
 )
 from sensor_messages import SensorMessage
 from sensor_workers import SENSORS, sensor_threads
@@ -60,7 +62,12 @@ def _run_receiver(stop_event: threading.Event) -> None:
 
 def run() -> None:
     log("SYSTEM", "Preparando LoRa según configuración uwu", "SYS")
-    mode = configure_from_config()
+    try:
+        mode = configure_from_config()
+    except Exception as exc:
+        log("SYSTEM", f"Fallo al configurar LoRa, continuo sin radio: {exc}", "ERROR")
+        record_init_error(f"configuración fallida: {exc}")
+        mode = MODE_TX
     log("SYSTEM", f"LoRa tras init ({mode.upper()}): {'LISTO' if is_ready() else 'NO LISTO'}", "SYS")
     stop_event = threading.Event()
 

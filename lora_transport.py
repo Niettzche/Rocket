@@ -232,6 +232,12 @@ def get_init_error() -> Optional[str]:
     return _LORA_INIT_ERROR
 
 
+def record_init_error(reason: str) -> None:
+    global _LORA_READY, _LORA_INIT_ERROR
+    _LORA_READY = False
+    _LORA_INIT_ERROR = reason
+
+
 def _chunk_bytes(data: bytes, max_len: int) -> List[bytes]:
     return [data[i : i + max_len] for i in range(0, len(data), max_len)]
 
@@ -398,6 +404,7 @@ __all__ = [
     "MODE_RX",
     "MODE_TX",
     "configure_from_config",
+    "record_init_error",
     "get_mode",
     "get_init_error",
     "is_ready",
