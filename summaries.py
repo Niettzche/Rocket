@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from logger import log
-from lora_transport import is_ready
+from lora_transport import get_init_error, is_ready
 from sensor_workers import CAPS
 from aggregator import ActivityTracker
 from sensor_messages import isoformat_utc
@@ -45,4 +45,9 @@ def log_final_summary(tracker: ActivityTracker) -> None:
         )
     else:
         log("SYSTEM", "Señal por aceleración cero: NO ENVIADA", "WARN")
-    log("SYSTEM", f"LoRa: {'LISTO' if is_ready() else 'NO LISTO'}", "INFO")
+    lora_ready = is_ready()
+    log("SYSTEM", f"LoRa: {'LISTO' if lora_ready else 'NO LISTO'}", "INFO")
+    if not lora_ready:
+        error = get_init_error()
+        detalle = error if error else "motivo desconocido"
+        log("SYSTEM", f"LoRa no se inició correctamente: {detalle}", "ERROR")

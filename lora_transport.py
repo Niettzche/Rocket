@@ -7,9 +7,17 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-import loralib
-
 from logger import log
+
+try:
+    import loralib  # type: ignore
+
+    _LORALIB_AVAILABLE = True
+    _LORALIB_IMPORT_ERROR: Optional[BaseException] = None
+except Exception as exc:  # pragma: no cover - depends on env
+    loralib = None  # type: ignore
+    _LORALIB_AVAILABLE = False
+    _LORALIB_IMPORT_ERROR = exc
 
 MODE_TX = "tx"
 MODE_RX = "rx"
@@ -104,8 +112,9 @@ _FRAME_TIMEOUT = _CONFIG["frame_timeout"]
 
 _LORA_MODE = _CONFIG["mode"]
 _LORA_READY = False
+_LORA_INIT_ERROR: Optional[str] = None
 
-_HAS_RECV = hasattr(loralib, "recv")
+_HAS_RECV = _LORALIB_AVAILABLE and hasattr(loralib, "recv")
 _WARNED_RECV_UNAVAILABLE = False
 _WARNED_RX_NOT_READY = False
 
@@ -148,11 +157,21 @@ _FRAME_ASSEMBLER = _FrameAssembler(_FRAME_TIMEOUT)
 
 
 def lora_init_tx() -> None:
-    global _LORA_MODE, _LORA_READY, _WARNED_RX_NOT_READY
+    global _LORA_MODE, _LORA_READY, _WARNED_RX_NOT_READY, _LORA_INIT_ERROR
+    if not _LORALIB_AVAILABLE:
+        _LORA_READY = False
+        _LORA_INIT_ERROR = (
+            f"loralib no disponible: {_LORALIB_IMPORT_ERROR}"
+            if _LORALIB_IMPORT_ERROR
+            else "loralib no está instalado"
+        )
+        log("LORA", f"no pude inicializar uwu (dependencia faltante): {_LORA_INIT_ERROR}", "ERROR", sys.stderr)
+        return
     try:
         loralib.init(0, LORA_FREQ_HZ, LORA_SF)
         _LORA_MODE = MODE_TX
         _LORA_READY = True
+        _LORA_INIT_ERROR = None
         _WARNED_RX_NOT_READY = False
         log(
             "LORA",
@@ -161,15 +180,26 @@ def lora_init_tx() -> None:
         )
     except Exception as exc:
         _LORA_READY = False
+        _LORA_INIT_ERROR = str(exc)
         log("LORA", f"no pude inicializar uwu: {exc}", "ERROR", sys.stderr)
 
 
 def lora_init_rx() -> None:
-    global _LORA_MODE, _LORA_READY, _WARNED_RX_NOT_READY
+    global _LORA_MODE, _LORA_READY, _WARNED_RX_NOT_READY, _LORA_INIT_ERROR
+    if not _LORALIB_AVAILABLE:
+        _LORA_READY = False
+        _LORA_INIT_ERROR = (
+            f"loralib no disponible: {_LORALIB_IMPORT_ERROR}"
+            if _LORALIB_IMPORT_ERROR
+            else "loralib no está instalado"
+        )
+        log("LORA", f"no pude inicializar uwu en modo RX: {_LORA_INIT_ERROR}", "ERROR", sys.stderr)
+        return
     try:
         loralib.init(1, LORA_FREQ_HZ, LORA_SF)
         _LORA_MODE = MODE_RX
         _LORA_READY = True
+        _LORA_INIT_ERROR = None
         _WARNED_RX_NOT_READY = False
         log(
             "LORA",
@@ -178,6 +208,7 @@ def lora_init_rx() -> None:
         )
     except Exception as exc:
         _LORA_READY = False
+        _LORA_INIT_ERROR = str(exc)
         log("LORA", f"no pude inicializar uwu en modo RX: {exc}", "ERROR", sys.stderr)
 
 
@@ -195,6 +226,10 @@ def get_mode() -> str:
 
 def is_ready() -> bool:
     return _LORA_READY
+
+
+def get_init_error() -> Optional[str]:
+    return _LORA_INIT_ERROR
 
 
 def _chunk_bytes(data: bytes, max_len: int) -> List[bytes]:
@@ -224,6 +259,9 @@ def _make_frames(topic: str, payload: Dict[str, Any], max_len: int) -> List[byte
 def send_to_lora(payload: Dict[str, Any]) -> None:
     if _LORA_MODE != MODE_TX:
         log("LORA", "modo RX activo; omito envío", "WARN")
+        return
+    if not _LORALIB_AVAILABLE:
+        log("LORA", "loralib no está disponible; omito envío", "ERROR", sys.stderr)
         return
     if not _LORA_READY:
         log("LORA", "no listo; omito envío (modo test)", "WARN")
@@ -362,6 +400,7 @@ __all__ = [
     "MODE_TX",
     "configure_from_config",
     "get_mode",
+    "get_init_error",
     "is_ready",
     "lora_init_rx",
     "lora_init_tx",
