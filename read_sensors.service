@@ -1,18 +1,17 @@
 [Unit]
-Description=Read sensors and forward data over LoRa
+Description=Read sensor data and forward payloads over LoRa
 After=network-online.target
 Wants=network-online.target
-StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-User=archmedean2345
-Group=archmedean2345
-WorkingDirectory=/home/archmedean2345/lecturas_refactorizado_5
+User=mario
+Group=mario
+WorkingDirectory=/home/mario/rocket_system
 Environment="PYTHONUNBUFFERED=1"
-Environment="PYTHONPATH=/home/archmedean2345/lecturas_refactorizado_5/LoRa-RaspberryPi:$PYTHONPATH"
-ExecStart=/usr/bin/env bash /home/archmedean2345/lecturas_refactorizado_5/start.sh
-Restart=always
+Environment="PYTHONPATH=/home/mario/rocket_system/external/LoRa-RaspberryPi:$PYTHONPATH"
+ExecStart=/usr/bin/env python3 -u read_sensors.py
+Restart=on-failure
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
