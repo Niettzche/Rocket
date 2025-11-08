@@ -380,8 +380,7 @@ def receive_loop(
         log("LORA", "modo actual no es RX; detengo receive_loop", "WARN")
         return
     if not _LORA_READY:
-        log("LORA", "LoRa RX no está listo; abortando receive_loop", "ERROR", sys.stderr)
-        return
+        log("LORA", "LoRa RX no está listo; seguiré esperando reintentos", "WARN")
     listener = handler or _default_rx_handler
     interval = _POLL_INTERVAL if poll_interval is None else max(0.0, float(poll_interval))
     while stop_event is None or not stop_event.is_set():
