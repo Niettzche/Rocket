@@ -55,7 +55,6 @@ const loadTelemetryUi = async () => {
 
   if (isDev && process.env.VITE_DEV_SERVER_URL) {
     await mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
     return;
   }
 
@@ -107,6 +106,15 @@ serialManager.on('line', (payload) => {
   }
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('bridge:serial-line', payload);
+  }
+});
+
+serialManager.on('payload', (payload) => {
+  if (!payload) {
+    return;
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('bridge:payload', payload);
   }
 });
 

@@ -21,4 +21,5 @@ contextBridge.exposeInMainWorld('telemetryBridge', {
   onBridgeStopped: (handler) => on('bridge:stopped', handler),
   onBridgeError: (handler) => on('bridge:error', handler),
   onSerialLine: (handler) => on('bridge:serial-line', handler),
+  onPayload: (handler) => on('bridge:payload', handler),
 });

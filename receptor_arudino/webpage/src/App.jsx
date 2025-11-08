@@ -6,7 +6,7 @@ import OrientationVisualizer from './components/OrientationVisualizer.jsx';
 import UwUCard from './components/UwUCard.jsx';
 import CommandTerminal from './components/CommandTerminal.jsx';
 import SerialMonitor from './components/SerialMonitor.jsx';
-import payload from '../lora_payload_sample.json';
+import initialPayload from '../lora_payload_sample.json';
 import logo from './assets/logo.png';
 
 const ensureTrailingSlash = (value) => (value.endsWith('/') ? value : `${value}/`);
@@ -36,23 +36,76 @@ const formatTimestamp = (iso) => {
   return Number.isNaN(date.getTime()) ? 'Formato inválido' : date.toLocaleString();
 };
 
+const asObject = (value) => (value && typeof value === 'object' ? value : {});
+
+const ensureTelemetryShape = (payload) => {
+  const base = asObject(payload);
+  return {
+    ...base,
+    sensors: { ...asObject(base.sensors) },
+  };
+};
+
+const mergeTelemetrySnapshot = (current, incoming) => {
+  if (!incoming || typeof incoming !== 'object') {
+    return ensureTelemetryShape(current);
+  }
+  const safeCurrent = ensureTelemetryShape(current);
+  const safeIncoming = ensureTelemetryShape(incoming);
+  return {
+    ...safeCurrent,
+    ...safeIncoming,
+    sensors: {
+      ...safeCurrent.sensors,
+      ...safeIncoming.sensors,
+    },
+  };
+};
+
+const sanitizeMpuSnapshot = (candidate = {}) => ({
+  timestamp: candidate?.timestamp ?? null,
+  accel_g: {
+    ax: candidate?.accel_g?.ax ?? null,
+    ay: candidate?.accel_g?.ay ?? null,
+    az: candidate?.accel_g?.az ?? null,
+  },
+  gyro_dps: {
+    gx: candidate?.gyro_dps?.gx ?? null,
+    gy: candidate?.gyro_dps?.gy ?? null,
+    gz: candidate?.gyro_dps?.gz ?? null,
+  },
+  attitude_deg: {
+    pitch: candidate?.attitude_deg?.pitch ?? null,
+    roll: candidate?.attitude_deg?.roll ?? null,
+    yaw: candidate?.attitude_deg?.yaw ?? null,
+  },
+});
+
+const sanitizeNeoSnapshot = (candidate = {}) => ({
+  timestamp: candidate?.timestamp ?? null,
+  latitude: candidate?.latitude ?? null,
+  longitude: candidate?.longitude ?? null,
+  altitude: candidate?.altitude ?? null,
+  fix_time: candidate?.fix_time ?? null,
+  raw: candidate?.raw ?? null,
+});
+
 function App() {
+  const [telemetry, setTelemetry] = useState(() => ensureTelemetryShape(initialPayload));
   const [isReady, setIsReady] = useState(false);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isSerialMonitorOpen, setIsSerialMonitorOpen] = useState(false);
   const [serialLines, setSerialLines] = useState([]);
-  const {
-    reported_at: reportedAt,
-    sensors: { mpu6050, neo6m },
-  } = payload;
-
-  const formatTimeShort = (iso) => {
-    if (!iso) return 'Sin hora';
-    const date = new Date(iso);
-    return Number.isNaN(date.getTime())
-      ? 'Hora inválida'
-      : date.toLocaleTimeString('es-MX', { hour12: false });
-  };
+  const [connectionStatus, setConnectionStatus] = useState({
+    variant: 'info',
+    message: 'Vista precargada. Conecta el receptor para recibir datos en vivo.',
+  });
+  const [lastPacketAt, setLastPacketAt] = useState(initialPayload?.reported_at ?? null);
+  const [lastTopic, setLastTopic] = useState(initialPayload?._meta?.topic ?? null);
+  const sensors = telemetry?.sensors ?? {};
+  const reportedAt = telemetry?.reported_at ?? null;
+  const mpu6050 = sanitizeMpuSnapshot(sensors.mpu6050);
+  const neo6m = sanitizeNeoSnapshot(sensors.neo6m);
 
   const toFixed = (value, decimals = 2) => {
     if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -169,6 +222,67 @@ function App() {
     if (typeof window === 'undefined') {
       return undefined;
     }
+    const bridge = window?.telemetryBridge;
+    if (!bridge) {
+      return undefined;
+    }
+
+    const unsubscribeFns = [];
+
+    if (bridge.onPayload) {
+      unsubscribeFns.push(
+        bridge.onPayload((incoming) => {
+          if (!incoming || typeof incoming !== 'object') {
+            return;
+          }
+          setTelemetry((prev) => mergeTelemetrySnapshot(prev, incoming));
+          const receivedAt = incoming?._meta?.received_at ?? incoming?.reported_at ?? new Date().toISOString();
+          setLastPacketAt(receivedAt);
+          setLastTopic(incoming?._meta?.topic ?? incoming?.topic ?? null);
+          const topicLabel = incoming?._meta?.topic ?? incoming?.topic;
+          setConnectionStatus({
+            variant: 'success',
+            message: topicLabel ? `Paquete en vivo (${topicLabel}) recibido.` : 'Paquete en vivo recibido.',
+          });
+        }),
+      );
+    }
+
+    if (bridge.onBridgeError) {
+      unsubscribeFns.push(
+        bridge.onBridgeError((payload) => {
+          const message = payload?.message || 'Error inesperado en el puerto serial.';
+          setConnectionStatus({ variant: 'error', message });
+        }),
+      );
+    }
+
+    if (bridge.onBridgeStopped) {
+      unsubscribeFns.push(
+        bridge.onBridgeStopped(() => {
+          setConnectionStatus({
+            variant: 'warning',
+            message: 'La conexión serial se detuvo. Reintenta desde el selector de puertos.',
+          });
+        }),
+      );
+    }
+
+    return () => {
+      unsubscribeFns.forEach((unsubscribe) => {
+        try {
+          unsubscribe?.();
+        } catch {
+          // ignore
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
 
     const bridge = window?.telemetryBridge;
     if (!bridge?.onSerialLine) {
@@ -246,6 +360,12 @@ function App() {
     setSerialLines([]);
   };
 
+  const bannerVariant = connectionStatus.variant ?? 'info';
+  const statusMessage = connectionStatus.message ?? 'Esperando telemetría en vivo…';
+  const lastPacketMeta = lastPacketAt
+    ? `Último paquete: ${formatTimestamp(lastPacketAt)}${lastTopic ? ` · ${lastTopic}` : ''}`
+    : 'Aún no se reciben paquetes desde el receptor.';
+
   return (
     <div className="app-shell">
       {!isReady && (
@@ -259,6 +379,13 @@ function App() {
       )}
 
       <div className={`app ${isReady ? 'app--ready' : 'app--loading'}`}>
+        <div className={`connection-banner connection-banner--${bannerVariant}`}>
+          <span className="connection-banner__pulse" aria-hidden />
+          <div className="connection-banner__content">
+            <p className="connection-banner__label">{statusMessage}</p>
+            <p className="connection-banner__meta">{lastPacketMeta}</p>
+          </div>
+        </div>
         <main className="app__content">
           <div className="sensor-grid">
             <SensorCard

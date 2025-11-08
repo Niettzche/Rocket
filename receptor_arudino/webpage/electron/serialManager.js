@@ -176,17 +176,24 @@ export class SerialManager extends EventEmitter {
       return;
     }
 
-    if (!this.capturing) {
-      return;
-    }
-
     if (line.startsWith('Topic:')) {
       this.topic = line.split(':', 1)[1]?.trim() || null;
       return;
     }
 
     if (line.startsWith('{') || line.startsWith('[')) {
-      this.handlePayload(line).catch((error) => this.emit('error', error));
+      const activeTopic = this.topic || 'sensors';
+      this.handlePayload(line, activeTopic)
+        .catch((error) => this.emit('error', error))
+        .finally(() => {
+          if (!this.capturing) {
+            this.topic = null;
+          }
+        });
+      return;
+    }
+
+    if (!this.capturing) {
       return;
     }
 
@@ -196,12 +203,12 @@ export class SerialManager extends EventEmitter {
     }
   }
 
-  async handlePayload(text) {
+  async handlePayload(text, fallbackTopic = 'sensors') {
     try {
       const payload = JSON.parse(text);
       if (payload && typeof payload === 'object') {
         const meta = (payload._meta = payload._meta && typeof payload._meta === 'object' ? payload._meta : {});
-        meta.topic = this.topic || meta.topic || 'sensors';
+        meta.topic = this.topic || meta.topic || fallbackTopic || 'sensors';
         meta.received_at = new Date().toISOString();
       }
       await fs.writeFile(this.outputPath, JSON.stringify(payload, null, 2), 'utf-8');
