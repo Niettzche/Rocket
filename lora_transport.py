@@ -113,10 +113,12 @@ _FRAME_TIMEOUT = _CONFIG["frame_timeout"]
 _LORA_MODE = _CONFIG["mode"]
 _LORA_READY = False
 _LORA_INIT_ERROR: Optional[str] = None
+_LORA_LINK_FAILURE = False
 
 _HAS_RECV = _LORALIB_AVAILABLE and hasattr(loralib, "recv")
 _WARNED_RECV_UNAVAILABLE = False
 _WARNED_RX_NOT_READY = False
+_WARNED_TX_LINK_FAILURE = False
 
 
 class _FrameAssembler:
@@ -172,8 +174,20 @@ def _ensure_init_success(result: Any) -> None:
         raise RuntimeError(message)
 
 
+def _mark_link_failure() -> None:
+    global _LORA_READY, _LORA_LINK_FAILURE, _LORA_INIT_ERROR
+    _LORA_READY = False
+    _LORA_LINK_FAILURE = True
+    _LORA_INIT_ERROR = "El LoRa no se conectó correctamente (sin respuesta)"
+
+
+def _clear_link_failure() -> None:
+    global _LORA_LINK_FAILURE
+    _LORA_LINK_FAILURE = False
+
+
 def lora_init_tx() -> None:
-    global _LORA_MODE, _LORA_READY, _WARNED_RX_NOT_READY, _LORA_INIT_ERROR
+    global _LORA_MODE, _LORA_READY, _WARNED_RX_NOT_READY, _LORA_INIT_ERROR, _WARNED_TX_LINK_FAILURE
     if not _LORALIB_AVAILABLE:
         _LORA_READY = False
         _LORA_INIT_ERROR = (
@@ -185,7 +199,14 @@ def lora_init_tx() -> None:
         return
     try:
         result = loralib.init(0, LORA_FREQ_HZ, LORA_SF)
+        if result == 3:
+            _mark_link_failure()
+            _WARNED_TX_LINK_FAILURE = False
+            log("LORA", "loralib.init devolvió 3: LoRa no responde; sólo imprimiré lecturas", "ERROR", sys.stderr)
+            return
         _ensure_init_success(result)
+        _clear_link_failure()
+        _WARNED_TX_LINK_FAILURE = False
         _LORA_MODE = MODE_TX
         _LORA_READY = True
         _LORA_INIT_ERROR = None
@@ -202,7 +223,7 @@ def lora_init_tx() -> None:
 
 
 def lora_init_rx() -> None:
-    global _LORA_MODE, _LORA_READY, _WARNED_RX_NOT_READY, _LORA_INIT_ERROR
+    global _LORA_MODE, _LORA_READY, _WARNED_RX_NOT_READY, _LORA_INIT_ERROR, _WARNED_TX_LINK_FAILURE
     if not _LORALIB_AVAILABLE:
         _LORA_READY = False
         _LORA_INIT_ERROR = (
@@ -214,8 +235,14 @@ def lora_init_rx() -> None:
         return
     try:
         result = loralib.init(1, LORA_FREQ_HZ, LORA_SF)
-        print(f"HOLA SENAPIIIAISDOAI ES TE ES EL RESULT {result=}")
+        if result == 3:
+            _mark_link_failure()
+            _WARNED_TX_LINK_FAILURE = False
+            log("LORA", "loralib.init devolvió 3 en modo RX: LoRa no responde", "ERROR", sys.stderr)
+            return
         _ensure_init_success(result)
+        _clear_link_failure()
+        _WARNED_TX_LINK_FAILURE = False
         _LORA_MODE = MODE_RX
         _LORA_READY = True
         _LORA_INIT_ERROR = None
@@ -252,9 +279,14 @@ def get_init_error() -> Optional[str]:
 
 
 def record_init_error(reason: str) -> None:
-    global _LORA_READY, _LORA_INIT_ERROR
+    global _LORA_READY, _LORA_INIT_ERROR, _LORA_LINK_FAILURE
     _LORA_READY = False
     _LORA_INIT_ERROR = reason
+    _LORA_LINK_FAILURE = False
+
+
+def has_link_failure() -> bool:
+    return _LORA_LINK_FAILURE
 
 
 def _chunk_bytes(data: bytes, max_len: int) -> List[bytes]:
@@ -287,6 +319,17 @@ def send_to_lora(payload: Dict[str, Any]) -> None:
         return
     if not _LORALIB_AVAILABLE:
         log("LORA", "loralib no está disponible; omito envío", "ERROR", sys.stderr)
+        return
+    if _LORA_LINK_FAILURE:
+        global _WARNED_TX_LINK_FAILURE
+        if not _WARNED_TX_LINK_FAILURE:
+            log(
+                "LORA",
+                "LoRa no se conectó correctamente; sólo imprimiré lecturas (sin envío)",
+                "ERROR",
+                sys.stderr,
+            )
+            _WARNED_TX_LINK_FAILURE = True
         return
     if not _LORA_READY:
         log("LORA", "no listo; omito envío (modo test)", "WARN")
@@ -427,6 +470,7 @@ __all__ = [
     "get_mode",
     "get_init_error",
     "is_ready",
+    "has_link_failure",
     "lora_init_rx",
     "lora_init_tx",
     "poll_received_payload",

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from logger import log
-from lora_transport import get_init_error, is_ready
+from lora_transport import get_init_error, has_link_failure, is_ready
 from sensor_workers import CAPS
 from aggregator import ActivityTracker
 from sensor_messages import isoformat_utc
@@ -51,3 +51,5 @@ def log_final_summary(tracker: ActivityTracker) -> None:
         error = get_init_error()
         detalle = error if error else "motivo desconocido"
         log("SYSTEM", f"LoRa no se inició correctamente: {detalle}", "ERROR")
+    if has_link_failure():
+        log("SYSTEM", "LoRa no se conectó correctamente (módulo sin respuesta)", "ERROR")
