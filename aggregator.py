@@ -8,6 +8,7 @@ import time
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from logger import log, log_payload
+from lora_transport import has_link_failure
 from sensor_messages import SensorMessage, build_payload
 try:
     from zero_accel_gpio import activate as gpio_activate
@@ -92,6 +93,7 @@ def aggregator_loop(
     last_emit = 0.0
     zero_acc_count = 0
     zero_acc_last_detection = 0.0
+    warned_link_failure = False
     try:
         while not stop_event.is_set():
             try:
@@ -143,6 +145,17 @@ def aggregator_loop(
                 continue
             payload = build_payload(latest, expected, now)
             log_payload(payload)
+            if has_link_failure():
+                if not warned_link_failure:
+                    log(
+                        "LORA",
+                        "LoRa sin respuesta: omito envíos y sólo imprimiré lecturas",
+                        "ERROR",
+                        sys.stderr,
+                    )
+                    warned_link_failure = True
+                continue
+            warned_link_failure = False
             try:
                 send_payload(payload)
             except Exception as exc:
