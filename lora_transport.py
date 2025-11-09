@@ -214,6 +214,7 @@ def lora_init_rx() -> None:
         return
     try:
         result = loralib.init(1, LORA_FREQ_HZ, LORA_SF)
+        print(f"HOLA SENAPIIIAISDOAI ES TE ES EL RESULT {result=}")
         _ensure_init_success(result)
         _LORA_MODE = MODE_RX
         _LORA_READY = True
