@@ -94,7 +94,7 @@ fi
 
 RUN_GROUP="$(id -gn "$RUN_USER")"
 READ_SENSORS_PATH="$WORKING_DIR/read_sensors.py"
-LORA_PATH="$WORKING_DIR/external/LoRa-RaspberryPi"
+LORA_PATH="$WORKING_DIR/lora/LoRa-RaspberryPi"
 
 if [[ ! -f "$READ_SENSORS_PATH" ]]; then
     echo "Could not find read_sensors.py inside '$WORKING_DIR'." >&2

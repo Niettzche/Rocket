@@ -2,14 +2,12 @@
 #LoRa-RaspberryPi es la libreria que sirve con el Lora
 
 #=============PYTHON ENV PARA LA LIB==============================
-cd LoRa-RaspberryPi/
+cd lora/LoRa-RaspberryPi/
 make all
 export PYTHONPATH="$(pwd):$PYTHONPATH"
 
-cd ..
+cd ../..
 cd lectura_sensores_paralelo/
 python3 read_sensors.py
-
-
 
 

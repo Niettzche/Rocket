@@ -11,18 +11,17 @@ El punto de entrada principal es `read_sensors.py`, que puede operar como transm
 ## Requisitos previos
 - Python 3.9 o superior.
 - Acceso a los sensores conectados y los modulos Python que los controlan (`acceleration.py`, `BMP180.py`, `neo3.py`).
-- Libreria `loralib` compilada para la plataforma objetivo. El proyecto asume la estructura provista por el repositorio `LoRa-RaspberryPi` (ver seccion de preparacion).
+- Libreria `loralib` compilada para la plataforma objetivo. El repositorio se mantiene dentro de `lora/LoRa-RaspberryPi` y puede prepararse con el script incluido (ver seccion de preparacion).
 
 ## Preparacion del entorno
-1. Compila la libreria de LoRa:
+1. Ejecuta el script auxiliar para descargar/actualizar y compilar la libreria de LoRa:
    ```bash
-   git clone https://github.com/HelTecAutomation/LoRa-RaspberryPi.git
-   cd LoRa-RaspberryPi
-   make all
+   ./lora/install_loralib.sh
    ```
+   El script clona (o actualiza) `LoRa-RaspberryPi` dentro de `lora/` y corre `make all`.
 2. Expone la libreria al interprete de Python (ajusta la ruta segun tu entorno):
    ```bash
-   export PYTHONPATH="/ruta/a/LoRa-RaspberryPi:$PYTHONPATH"
+   export PYTHONPATH="/ruta/a/rocket_system/lora/LoRa-RaspberryPi:$PYTHONPATH"
    ```
 3. Regresa al directorio del proyecto `rocket_system`.
 4. (Opcional) Crea un entorno virtual e instala dependencias adicionales si las necesitas para tus sensores:
