@@ -18,46 +18,6 @@ struct FrameBucket {
 
 FrameBucket bucket;
 
-// Minimizes pretty JSON so the Electron bridge can parse it line by line.
-String toSingleLineJson(const String &raw) {
-  String compact;
-  compact.reserve(raw.length());
-  bool inString = false;
-  bool escaping = false;
-
-  for (uint16_t i = 0; i < raw.length(); ++i) {
-    char c = raw.charAt(i);
-    if (inString) {
-      compact += c;
-      if (escaping) {
-        escaping = false;
-      } else if (c == '\\') {
-        escaping = true;
-      } else if (c == '"') {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (c == '"') {
-      inString = true;
-      compact += c;
-      continue;
-    }
-
-    if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
-      continue;
-    }
-
-    compact += c;
-  }
-
-  if (compact.length() == 0) {
-    return raw;
-  }
-  return compact;
-}
-
 void resetBucket() {
   bucket.topic = "";
   bucket.total = 0;
@@ -164,11 +124,10 @@ void handleFrame(const uint8_t *data, int len) {
     for (uint8_t i = 0; i < bucket.total; ++i) {
       assembled += bucket.parts[i];
     }
-    String oneLine = toSingleLineJson(assembled);
     Serial.println(F("===== Payload recibido ====="));
     Serial.print(F("Topic: "));
     Serial.println(bucket.topic);
-    Serial.println(oneLine);
+    Serial.println(assembled);
     Serial.println(F("============================"));
 
     resetBucket();
