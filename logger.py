@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict
 
 LEVEL_COLORS = {
@@ -13,6 +15,8 @@ LEVEL_COLORS = {
     "PAYLOAD": "\033[95m",
     "RESET": "\033[0m",
 }
+
+_PAYLOAD_LOG_FILE = Path(__file__).resolve().parent / "logs" / "payloads.log"
 
 def log(sensor: str, message: str, level: str = "INFO", stream: Any = sys.stdout) -> None:
     level_key = level.upper()
@@ -28,3 +32,15 @@ def log_payload(payload: Dict[str, Any]) -> None:
     reset = LEVEL_COLORS["RESET"]
     print(f"{color}[PAYLOAD] [AGREGADOR]{reset} fotito uwu\n{pretty}")
     sys.stdout.flush()
+    _persist_payload(payload)
+
+
+def _persist_payload(payload: Dict[str, Any]) -> None:
+    timestamp = datetime.now(timezone.utc).isoformat()
+    serialized = json.dumps(payload, ensure_ascii=True)
+    try:
+        _PAYLOAD_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with _PAYLOAD_LOG_FILE.open("a", encoding="utf-8") as fp:
+            fp.write(f"{timestamp} {serialized}\n")
+    except OSError as exc:
+        log("SYSTEM", f"No pude guardar payloads en {_PAYLOAD_LOG_FILE}: {exc}", "ERROR", sys.stderr)
