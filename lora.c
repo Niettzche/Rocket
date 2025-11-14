@@ -14,7 +14,6 @@
  *******************************************************************************/
 
 #ifdef PYTHONMODULE
-#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #endif
 
@@ -27,7 +26,6 @@
 #include <sys/time.h>
 #include <signal.h>
 #include <stdlib.h>
-#include <stdint.h>
 
 #include <sys/ioctl.h>
 
@@ -60,8 +58,7 @@
 #define REG_SYNC_WORD				0x39
 #define REG_VERSION	  				0x42
 
-#define DEFAULT_PAYLOAD_LENGTH      0x40
-#define MAX_PACKET_BYTES            0xFF
+#define PAYLOAD_LENGTH              0x40
 
 // LOW NOISE AMPLIFIER
 #define REG_LNA                     0x0C
@@ -154,9 +151,6 @@
 #define MAP_DIO1_LORA_NOP      0x30  // --11----
 #define MAP_DIO2_LORA_NOP      0xC0  // ----11--
 
-#define LORA_STATUS_OK              0
-#define LORA_STATUS_NOT_DETECTED    3
-
 // #############################################
 // #############################################
 //
@@ -172,11 +166,6 @@ bool sx1272 = true;
 byte receivedbytes;
 
 enum sf_t { SF7=7, SF8, SF9, SF10, SF11, SF12 };
-
-// Forward declarations for internal helpers
-static void opmode (uint8_t mode);
-static void opmodeLora(void);
-int SetupLoRa(int freq, int sf);
 
 /*******************************************************************************
  *
@@ -195,7 +184,7 @@ sf_t sf = SF7;
 // Set center frequency
 uint32_t  freq = 869000000; // in Mhz! (868.1)
 
-byte hello[MAX_PACKET_BYTES + 1] = "HELLO";
+byte hello[32] = "HELLO";
 
 void die(const char *s)
 {
@@ -250,7 +239,7 @@ static void opmodeLora() {
 }
 
 
-int SetupLoRa(int freq, int sf)
+void SetupLoRa(int freq, int sf)
 {
 
 	digitalWrite(RST, HIGH);
@@ -277,8 +266,8 @@ int SetupLoRa(int freq, int sf)
 			sx1272 = false;
 		} else {
 			printf("Unrecognized transceiver.\n");
-			printf("LoRa transceiver not detected correctly.\n");
-			return LORA_STATUS_NOT_DETECTED;
+			//printf("Version: 0x%x\n",version);
+			exit(1);
 		}
 	}
 
@@ -317,14 +306,12 @@ int SetupLoRa(int freq, int sf)
 	} else {
 		writeReg(REG_SYMB_TIMEOUT_LSB,0x08);
 	}
-	writeReg(REG_MAX_PAYLOAD_LENGTH,MAX_PACKET_BYTES);
-	writeReg(REG_PAYLOAD_LENGTH,DEFAULT_PAYLOAD_LENGTH);
+	writeReg(REG_MAX_PAYLOAD_LENGTH,0x40);
+	writeReg(REG_PAYLOAD_LENGTH,PAYLOAD_LENGTH);
 	writeReg(REG_HOP_PERIOD,0xFF);
 	writeReg(REG_FIFO_ADDR_PTR, readReg(REG_FIFO_RX_BASE_AD));
 
 	writeReg(REG_LNA, LNA_MAX_GAIN);
-
-	return LORA_STATUS_OK;
 }
 
 boolean receive(char *payload) {
@@ -536,11 +523,7 @@ int main (int argc, char *argv[]) {
 
 	wiringPiSPISetup(CHANNEL, 500000);
 
-	int setup_status = SetupLoRa(freq, sf);
-	if (setup_status != LORA_STATUS_OK) {
-		printf("LoRa transceiver not detected. Initialization stopped (code %d).\n", setup_status);
-		return setup_status;
-	}
+	SetupLoRa(freq, sf);
 
 	if (!strcmp("sender", argv[1])) {
 		opmodeLora();
@@ -554,24 +537,11 @@ int main (int argc, char *argv[]) {
 		printf("Send packets at SF%i on %.6lf Mhz.\n", sf,(double)freq/1000000);
 		printf("------------------\n");
 
-		if (argc > 2) {
-			size_t message_len = strlen(argv[2]);
-			if (message_len > MAX_PACKET_BYTES) {
-				printf("Message too long (%zu bytes). Truncating to %d bytes.\n", message_len, MAX_PACKET_BYTES);
-				message_len = MAX_PACKET_BYTES;
-			}
-			memcpy(hello, argv[2], message_len);
-			hello[message_len] = '\0';
-		}
-
-		size_t payload_len = strlen((char *)hello);
-		if (payload_len == 0) {
-			printf("Nothing to send: payload length is zero.\n");
-			return 0;
-		}
+		if (argc > 2)
+			strncpy((char *)hello, argv[2], sizeof(hello));
 
 		while(1) {
-			txlora(hello, (byte)payload_len);
+			txlora(hello, strlen((char *)hello));
 			delay(5000);
 		}
 	} else {
@@ -597,18 +567,13 @@ static PyObject * LoraError;
 static PyObject* send(PyObject* self, PyObject* args)
 {
 	char * buffer;
-	Py_ssize_t size;
+	int size;
 
 	if (!PyArg_ParseTuple(args, "y#", &buffer, &size)){
 		return NULL;
 	}
 
-	if (size > MAX_PACKET_BYTES) {
-		printf("Message too long (%zd bytes). Truncating to %d bytes.\n", size, MAX_PACKET_BYTES);
-		size = MAX_PACKET_BYTES;
-	}
-
-	txlora((byte *)buffer, (byte)size);
+	txlora((byte *)buffer, size);
 
 	return PyLong_FromLong(0);
 }
@@ -661,11 +626,7 @@ static PyObject* init(PyObject* self, PyObject* args)
 
 	//set up SPI
 	wiringPiSPISetup(CHANNEL, 500000);
-	int init_status = SetupLoRa(freq, sf);
-	if (init_status != LORA_STATUS_OK) {
-		printf("LoRa transceiver not detected correctly.\n");
-		return PyLong_FromLong(init_status);
-	}
+	SetupLoRa(freq, sf);
 
 	//sender
 	if (mode == 0) {
