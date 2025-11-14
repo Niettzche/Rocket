@@ -151,6 +151,9 @@
 #define MAP_DIO1_LORA_NOP      0x30  // --11----
 #define MAP_DIO2_LORA_NOP      0xC0  // ----11--
 
+#define LORA_STATUS_OK              0
+#define LORA_STATUS_NOT_DETECTED    3
+
 // #############################################
 // #############################################
 //
@@ -239,7 +242,7 @@ static void opmodeLora() {
 }
 
 
-void SetupLoRa(int freq, int sf)
+int SetupLoRa(int freq, int sf)
 {
 
 	digitalWrite(RST, HIGH);
@@ -266,8 +269,7 @@ void SetupLoRa(int freq, int sf)
 			sx1272 = false;
 		} else {
 			printf("Unrecognized transceiver.\n");
-			//printf("Version: 0x%x\n",version);
-			exit(1);
+			return LORA_STATUS_NOT_DETECTED;
 		}
 	}
 
@@ -312,6 +314,7 @@ void SetupLoRa(int freq, int sf)
 	writeReg(REG_FIFO_ADDR_PTR, readReg(REG_FIFO_RX_BASE_AD));
 
 	writeReg(REG_LNA, LNA_MAX_GAIN);
+	return LORA_STATUS_OK;
 }
 
 boolean receive(char *payload) {
@@ -523,7 +526,11 @@ int main (int argc, char *argv[]) {
 
 	wiringPiSPISetup(CHANNEL, 500000);
 
-	SetupLoRa(freq, sf);
+	int setup_status = SetupLoRa(freq, sf);
+	if (setup_status != LORA_STATUS_OK) {
+		printf("LoRa transceiver not detected. Radio init skipped (code %d).\n", setup_status);
+		return setup_status;
+	}
 
 	if (!strcmp("sender", argv[1])) {
 		opmodeLora();
@@ -626,7 +633,11 @@ static PyObject* init(PyObject* self, PyObject* args)
 
 	//set up SPI
 	wiringPiSPISetup(CHANNEL, 500000);
-	SetupLoRa(freq, sf);
+	int init_status = SetupLoRa(freq, sf);
+	if (init_status != LORA_STATUS_OK) {
+		printf("LoRa transceiver not detected correctly.\n");
+		return PyLong_FromLong(init_status);
+	}
 
 	//sender
 	if (mode == 0) {
