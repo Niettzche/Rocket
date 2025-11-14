@@ -64,6 +64,9 @@ En modo `rx` el proceso:
 
 En ambos casos, las salidas se escriben en consola con colores para facilitar la lectura. El resumen final indica que sensores enviaron datos reales, cuales usaron valores simulados y si se detecto la condicion de aceleracion cero.
 
+## Configuracion adicional
+El archivo `config.json` permite ajustar opciones generales del sistema. Actualmente soporta la bandera `print_payloads` (por defecto `true`). Si se establece en `false`, los payloads agregados dejan de imprimirse en consola, aunque se siguen guardando en `logs/payloads.log`.
+
 Para detener el servicio usa `Ctrl+C`. El programa captura SIGINT/SIGTERM y cierra los hilos de forma ordenada.
 
 ## Despliegue como servicio
