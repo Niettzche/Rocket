@@ -184,7 +184,6 @@ def main():
                                 print(GPIO_ACTIVATED_MSG)
                                 print(GPIO_SECOND_ACTIVATED_MSG)
                                 print("[INFO] HACIENDO TIME SLEEP UWU")
-                                time.sleep(60)
                                 signal_sent = True
                                 break
 
