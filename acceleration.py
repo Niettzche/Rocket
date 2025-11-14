@@ -22,7 +22,7 @@ DT_SLEEP = 0.05
 #--Config de la aceleracion
 TOLERANCE = 0.04   
 QUIET_DELAY = 1.0
-GPIO_PIN = 26 
+GPIO_PIN = 25 
 GPIO_SECOND_PIN = 7
 GPIO_ACTIVATED_MSG = f"\033[31m[GPIO {GPIO_PIN} ACTIVADO]\033[0m"
 GPIO_SECOND_ACTIVATED_MSG = f"\033[31m[GPIO {GPIO_SECOND_PIN} ACTIVADO]\033[0m"
@@ -113,7 +113,7 @@ def complementary_filter(ax, ay, az, gx, gy, gz, dt, state):
     return state
 
 def main():
-    offsets = calibrate_sensor()
+    offsets = None
     state = {'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0,
              'pitch_smooth': 0.0, 'roll_smooth': 0.0}
     alpha_filter = {'ax': 0.0, 'ay': 0.0, 'az': 0.0,
@@ -129,7 +129,10 @@ def main():
         GPIO.setwarnings(False)
         GPIO.setup(GPIO_PIN, GPIO.OUT, initial=GPIO.LOW)
         GPIO.setup(GPIO_SECOND_PIN, GPIO.OUT, initial=GPIO.LOW)
+        GPIO.output(GPIO_PIN, GPIO.LOW)
+        GPIO.output(GPIO_SECOND_PIN, GPIO.LOW)
         gpio_initialized = True
+        offsets = calibrate_sensor()
 
         filename = f"mpu6050_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         with open(filename, mode='w', newline='') as file:
