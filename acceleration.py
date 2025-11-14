@@ -112,6 +112,27 @@ def complementary_filter(ax, ay, az, gx, gy, gz, dt, state):
     state['roll_smooth'] = SMOOTHING * state['roll_smooth'] + (1 - SMOOTHING) * state['roll']
     return state
 
+def log_debug_sample(alpha_filter, state, ciclo):
+    """Emit the same debug prints used in the standalone script."""
+    if ciclo % 10 != 0:
+        return
+    now = datetime.now().strftime('%H:%M:%S')
+    print(f"[{now}]")
+    print(
+        "Acel: X={:.2f}g  Y={:.2f}g  Z={:.2f}g".format(
+            alpha_filter['ax'],
+            alpha_filter['ay'],
+            alpha_filter['az'],
+        )
+    )
+    print(
+        "Ángulos: Pitch={:.2f}°  Roll={:.2f}°  Yaw={:.2f}°\n".format(
+            state['pitch_smooth'],
+            state['roll_smooth'],
+            state['yaw'],
+        )
+    )
+
 def main():
     offsets = None
     state = {'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0,
@@ -190,10 +211,7 @@ def main():
                                 signal_sent = True
                                 break
 
-                    if ciclo % 10 == 0:
-                        print(f"[{datetime.now().strftime('%H:%M:%S')}]")
-                        print(f"Acel: X={alpha_filter['ax']:.2f}g  Y={alpha_filter['ay']:.2f}g  Z={alpha_filter['az']:.2f}g")
-                        print(f"Ángulos: Pitch={state['pitch_smooth']:.2f}°  Roll={state['roll_smooth']:.2f}°  Yaw={state['yaw']:.2f}°\n")
+                    log_debug_sample(alpha_filter, state, ciclo)
 
                     writer.writerow([
                         datetime.now().isoformat(),

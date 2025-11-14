@@ -76,6 +76,8 @@ def mpu6050_worker(outbox: queue.Queue[SensorMessage], stop_event: threading.Eve
     alpha_filter = {axis: 0.0 for axis in ("ax", "ay", "az", "gx", "gy", "gz")}
     last_time = time.time()
     dt_sleep = getattr(mpu, "DT_SLEEP", 0.05)
+    ciclo = 0
+    debug_print_failed = False
     log("MPU6050", "Arrancó el bucle de captura uwu", "DEBUG")
     while not stop_event.is_set():
         now = time.time()
@@ -117,8 +119,16 @@ def mpu6050_worker(outbox: queue.Queue[SensorMessage], stop_event: threading.Eve
                 },
             )
         )
+        if hasattr(mpu, "log_debug_sample"):
+            try:
+                mpu.log_debug_sample(alpha_filter, state, ciclo)
+            except Exception as exc:
+                if not debug_print_failed:
+                    log("MPU6050", f"no pude imprimir el debug uwu: {exc}", "WARN")
+                    debug_print_failed = True
         if stop_event.wait(dt_sleep):
             break
+        ciclo += 1
     log("MPU6050", "Bucle de captura detenido uwu", "DEBUG")
 
 def bmp180_worker(outbox: queue.Queue[SensorMessage], stop_event: threading.Event) -> None:
