@@ -133,7 +133,7 @@ def aggregator_loop(
                         if zero_acc_count >= ZERO_ACCEL_REQUIRED:
                             tracker.record_zero_accel_signal(message.timestamp, magnitude)
                             if gpio_activate():
-                                log("MPU6050", "GPIO 12 y 7 activados uwu", "WARN")
+                                log("MPU6050", "GPIO 26 activado uwu", "WARN")
                             log(
                                 "MPU6050",
                                 "Señal registrada por aceleración cero",
