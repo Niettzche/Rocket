@@ -9,6 +9,22 @@ from typing import Any, Callable, Dict, List, Optional
 
 from logger import log
 
+def _ensure_local_loralib_path() -> None:
+    """Prepend known build locations of loralib to sys.path if they exist."""
+    repo_root = Path(__file__).resolve().parent
+    candidates = [
+        repo_root / "lora" / "LoRa-RaspberryPi",
+        repo_root / "LoRa-RaspberryPi",
+        repo_root / "lora",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            candidate_str = str(candidate)
+            if candidate_str not in sys.path:
+                sys.path.insert(0, candidate_str)
+
+_ensure_local_loralib_path()
+
 try:
     import loralib  # type: ignore
 
@@ -17,6 +33,13 @@ try:
 except Exception as exc:  # pragma: no cover - depends on env
     loralib = None  # type: ignore
     _LORALIB_AVAILABLE = False
+    if isinstance(exc, ModuleNotFoundError) and exc.name == "torch":
+        exc = ModuleNotFoundError(
+            "Se intentó importar PyTorch desde el paquete pip 'loralib'. "
+            "Compila el módulo LoRa-RaspberryPi incluido en este repositorio "
+            "o ajusta PYTHONPATH para apuntar a esa carpeta.",
+            name="loralib",
+        )
     _LORALIB_IMPORT_ERROR = exc
 
 MODE_TX = "tx"
