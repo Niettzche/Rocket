@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "dev:electron": "cross-env NODE_ENV=development concurrently -k \"npm:dev\" \"npm:electron\"",
     "electron": "wait-on tcp:5173 && cross-env NODE_ENV=development VITE_DEV_SERVER_URL=http://localhost:5173 electron electron/main.js",
-    "start:electron": "cross-env NODE_ENV=production electron electron/main.js"
+    "start:electron": "cross-env NODE_ENV=production electron electron/main.js",
+    "clean:serialport:prebuild": "rm -rf node_modules/@serialport/bindings-cpp/build",
+    "build:electron:win": "npm run build && npm run clean:serialport:prebuild && electron-builder --win --x64"
   },
   "dependencies": {
     "@serialport/parser-readline": "^11.0.0",
@@ -22,7 +24,31 @@
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "electron": "^30.0.9",
+    "electron-builder": "^24.13.3",
     "vite": "^5.2.0",
     "wait-on": "^7.0.1"
+  },
+  "build": {
+    "appId": "com.rocket.receptor",
+    "productName": "RocketReceptor",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release",
+      "buildResources": "electron/resources"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
   }
 }

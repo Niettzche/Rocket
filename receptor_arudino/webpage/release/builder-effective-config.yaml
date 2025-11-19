@@ -1,0 +1,17 @@
+directories:
+  output: release
+  buildResources: electron/resources
+appId: com.rocket.receptor
+productName: RocketReceptor
+files:
+  - filter:
+      - dist/**/*
+      - electron/**/*
+      - package.json
+asar: true
+extraMetadata:
+  main: electron/main.js
+win:
+  target:
+    - nsis
+electronVersion: 30.5.1
